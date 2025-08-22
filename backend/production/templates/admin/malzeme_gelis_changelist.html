@@ -1,0 +1,111 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content_title %}
+    <h1>{{ title }} {% if cl.result_count %}<span class="small quiet">({{ cl.result_count }} geliş)</span>{% endif %}</h1>
+{% endblock %}
+
+{% block result_list %}
+    <!-- İstatistik Paneli -->
+    <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0; padding: 0;">
+        
+        <!-- Temel İstatistikler -->
+        <div class="stat-card" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
+            <h3 style="margin: 0 0 10px 0; color: #495057; font-size: 14px; font-weight: 600;">📦 Geliş İstatistikleri</h3>
+            <div style="font-size: 24px; font-weight: bold; color: #28a745; margin-bottom: 5px;">{{ toplam_gelis }}</div>
+            <div style="font-size: 12px; color: #6c757d;">Toplam Geliş</div>
+            <div style="font-size: 14px; color: #17a2b8; margin-top: 8px;">Son 30 gün: <strong>{{ son_30_gun_gelis }}</strong></div>
+        </div>
+
+        <!-- Para Birimi Toplamları -->
+        <div class="stat-card" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
+            <h3 style="margin: 0 0 10px 0; color: #495057; font-size: 14px; font-weight: 600;">💰 Para Birimi Toplamları</h3>
+            {% for pb in para_birimi_toplamlar %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-weight: 500;">{{ pb.para_birimi }}</span>
+                    <span style="color: #28a745; font-weight: bold;">{{ pb.toplam|floatformat:2 }}</span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Top Tedarikçiler -->
+        <div class="stat-card" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
+            <h3 style="margin: 0 0 10px 0; color: #495057; font-size: 14px; font-weight: 600;">🏢 En Aktif Tedarikçiler</h3>
+            {% for t in tedarikci_istatistikleri|slice:":5" %}
+                <div style="margin-bottom: 8px; padding: 5px; border-left: 3px solid #007cba;">
+                    <div style="font-weight: 500; font-size: 13px;">{{ t.satinalma_siparisi__tedarikci__ad|truncatechars:20 }}</div>
+                    <div style="font-size: 11px; color: #6c757d;">{{ t.gelis_sayisi }} geliş • {{ t.toplam_tutar|floatformat:2 }} TL</div>
+                </div>
+            {% empty %}
+                <div style="color: #6c757d; font-style: italic;">Henüz veri yok</div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- Rapor Linkleri -->
+    <div style="background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <h4 style="margin: 0 0 10px 0; color: #1565c0; font-size: 14px;">📋 Raporlar ve Analizler</h4>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{% url 'admin:malzeme_gelis_tedarikci_performans' %}" 
+               style="background: #1976d2; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px; font-size: 12px;">
+               🏢 Tedarikçi Performans Raporu
+            </a>
+            <button onclick="exportToExcel()" style="background: #388e3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+               📊 Excel'e Aktar
+            </button>
+        </div>
+    </div>
+
+    <!-- Hızlı Filtreler -->
+    <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 14px;">⚡ Hızlı Filtreler</h4>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="filterByDays(0)" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+               📅 Bugün
+            </button>
+            <button onclick="filterByDays(7)" style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+               📊 Son 7 Gün
+            </button>
+            <button onclick="filterByDays(30)" style="background: #ffc107; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+               📈 Son 30 Gün
+            </button>
+            <button onclick="clearFilters()" style="background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+               🔄 Tümü
+            </button>
+        </div>
+        
+        <script>
+        function filterByDays(days) {
+            const today = new Date();
+            let targetDate;
+            
+            if (days === 0) {
+                targetDate = today;
+            } else {
+                targetDate = new Date(today.getTime() - (days * 24 * 60 * 60 * 1000));
+            }
+            
+            const dateStr = targetDate.toISOString().split('T')[0];
+            const url = new URL(window.location);
+            url.searchParams.set('gelis_tarihi__gte', dateStr);
+            window.location.href = url.toString();
+        }
+        
+        function clearFilters() {
+            const url = new URL(window.location);
+            url.searchParams.delete('gelis_tarihi__gte');
+            window.location.href = url.toString();
+        }
+        
+        function exportToExcel() {
+            // Mevcut filtreleri koruyarak Excel export
+            const url = new URL(window.location);
+            url.searchParams.set('_export', 'excel');
+            window.open(url.toString(), '_blank');
+        }
+        </script>
+    </div>
+
+    {{ block.super }}
+{% endblock %}

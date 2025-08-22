@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Satın Alma Siparişi - {{ siparis.siparis_no }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .company-name {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .document-title {
+            font-size: 18pt;
+            color: #34495e;
+            margin-bottom: 5px;
+        }
+        
+        .siparis-no {
+            font-size: 14pt;
+            color: #e74c3c;
+        }
+        
+        .info-section {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .info-left, .info-right {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+        
+        .info-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 14pt;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        
+        .info-row {
+            margin-bottom: 5px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .total-section {
+            margin-top: 20px;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+        }
+        
+        .total-row {
+            text-align: right;
+            font-size: 14pt;
+            margin-bottom: 5px;
+        }
+        
+        .grand-total {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .signature-section {
+            display: table;
+            width: 100%;
+            margin-top: 50px;
+        }
+        
+        .signature-box {
+            display: table-cell;
+            width: 45%;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #333;
+            margin: 0 20px 5px 20px;
+            height: 40px;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14pt;
+        }
+        
+        .print-button:hover {
+            background-color: #229954;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">Yazdır</button>
+    
+    <div class="header">
+        <div class="company-name">ŞİRKET ADI</div>
+        <div class="document-title">SATIN ALMA SİPARİŞİ</div>
+        <div class="siparis-no">{{ siparis.siparis_no }}</div>
+    </div>
+    
+    <div class="info-section">
+        <div class="info-left">
+            <div class="info-box">
+                <h3>Tedarikçi Bilgileri</h3>
+                <div class="info-row">
+                    <span class="info-label">Firma:</span>
+                    {{ siparis.tedarikci.ad }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Kod:</span>
+                    {{ siparis.tedarikci.kod }}
+                </div>
+                {% if siparis.tedarikci.telefon %}
+                <div class="info-row">
+                    <span class="info-label">Telefon:</span>
+                    {{ siparis.tedarikci.telefon }}
+                </div>
+                {% endif %}
+                {% if siparis.tedarikci.email %}
+                <div class="info-row">
+                    <span class="info-label">E-posta:</span>
+                    {{ siparis.tedarikci.email }}
+                </div>
+                {% endif %}
+                {% if siparis.tedarikci.adres %}
+                <div class="info-row">
+                    <span class="info-label">Adres:</span>
+                    {{ siparis.tedarikci.adres }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="info-right">
+            <div class="info-box">
+                <h3>Sipariş Bilgileri</h3>
+                <div class="info-row">
+                    <span class="info-label">Tarih:</span>
+                    {{ siparis.tarih|date:"d.m.Y" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Teslim Tarihi:</span>
+                    {{ siparis.teslim_tarihi|date:"d.m.Y" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Oluşturan:</span>
+                    {{ siparis.olusturan.get_full_name|default:siparis.olusturan.username }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%;">Malzeme</th>
+                <th class="text-center" style="width: 15%;">Miktar</th>
+                <th class="text-center" style="width: 10%;">Birim</th>
+                <th class="text-right" style="width: 15%;">Birim Fiyat</th>
+                <th class="text-right" style="width: 20%;">Toplam</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kalem in kalemler %}
+            <tr>
+                <td>{{ kalem.malzeme_ihtiyaci.malzeme_adi }}</td>
+                <td class="text-center">{{ kalem.miktar|floatformat:2 }}</td>
+                <td class="text-center">{{ kalem.malzeme_ihtiyaci.birim }}</td>
+                <td class="text-right">{{ kalem.birim_fiyat|floatformat:2 }} TL</td>
+                <td class="text-right">{{ kalem.toplam_fiyat|floatformat:2 }} TL</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="total-section">
+        <div class="total-row">
+            <strong>Ara Toplam:</strong> {{ siparis.toplam_tutar|floatformat:2 }} TL
+        </div>
+        <div class="total-row">
+            <strong>KDV (%20):</strong> {% widthratio siparis.toplam_tutar 5 1 %} TL
+        </div>
+        <div class="total-row grand-total">
+            <strong>GENEL TOPLAM:</strong> {% widthratio siparis.toplam_tutar 6 5 %} TL
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><strong>Teslim Şartları:</strong></p>
+        <ul>
+            <li>Malzemeler belirtilen teslim tarihinde teslim edilecektir.</li>
+            <li>Teslim adresi firma adresimizdir.</li>
+            <li>Faturalar mal ile birlikte teslim edilecektir.</li>
+        </ul>
+        
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Satın Alma Yetkilisi</div>
+                <div>{{ siparis.olusturan.get_full_name|default:siparis.olusturan.username }}</div>
+                <div>{{ today|date:"d.m.Y" }}</div>
+            </div>
+            <div style="display: table-cell; width: 10%;"></div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Onaylayan</div>
+                <div>Yetkili İmza</div>
+                <div>{{ today|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

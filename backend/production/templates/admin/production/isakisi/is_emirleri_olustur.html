@@ -1,0 +1,253 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 20px auto;
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .workflow-info {
+        background: #e3f2fd;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 30px;
+        border-left: 4px solid #2196f3;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background: white;
+    }
+    
+    .form-group input:focus, .form-group select:focus {
+        outline: none;
+        border-color: #2196f3;
+        box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        margin: 0 5px;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: #2196f3;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .operations-list {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .operation-item {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 4px solid #2196f3;
+    }
+    
+    .operation-title {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .operation-details {
+        font-size: 12px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="form-container">
+        <h1>{{ is_akisi.ad }} - İş Emirleri Oluştur</h1>
+        
+        <!-- Workflow Bilgisi -->
+        <div class="workflow-info">
+            <h3>İş Akışı Bilgileri</h3>
+            <div><strong>Kod:</strong> {{ is_akisi.kod }}</div>
+            <div><strong>Ürün:</strong> {{ is_akisi.urun.ad }}</div>
+            <div><strong>Operasyon Sayısı:</strong> {{ is_akisi.operasyonlar.count }}</div>
+            <div><strong>Tahmini Süre:</strong> {{ is_akisi.tahmini_sure|floatformat:0 }} dakika</div>
+        </div>
+        
+        <!-- Operasyonlar Listesi -->
+        <div class="operations-list">
+            <h4>Oluşturulacak İş Emirleri</h4>
+            {% for operasyon in is_akisi.operasyonlar.all %}
+            <div class="operation-item">
+                <div class="operation-title">
+                    {{ operasyon.sira_no|stringformat:"02d" }}. {{ operasyon.operasyon_adi }}
+                </div>
+                <div class="operation-details">
+                    <i class="fas fa-industry"></i> {{ operasyon.istasyon.ad }} |
+                    <i class="fas fa-clock"></i> {{ operasyon.standart_sure }} dk/adet
+                    {% if operasyon.hazirlik_suresi > 0 %}
+                        + {{ operasyon.hazirlik_suresi }} dk hazırlık
+                    {% endif %}
+                    {% if operasyon.kritik %}
+                        | <span style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Kritik</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- İş Emri Oluşturma Formu -->
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="siparis">Sipariş Seçin:</label>
+                <select name="siparis" id="siparis" required onchange="loadKalemler()">
+                    <option value="">-- Sipariş Seçin --</option>
+                    {% for siparis in siparisler %}
+                        <option value="{{ siparis.id }}">{{ siparis.siparis_no }} - {{ siparis.musteri.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="kalem">Sipariş Kalemi:</label>
+                <select name="kalem" id="kalem" required disabled>
+                    <option value="">-- Önce sipariş seçin --</option>
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="miktar">Üretim Miktarı:</label>
+                    <input type="number" name="miktar" id="miktar" value="1" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="baslangic_tarihi">Başlangıç Tarihi:</label>
+                    <input type="date" name="baslangic_tarihi" id="baslangic_tarihi" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="baslangic_saati">Başlangıç Saati:</label>
+                    <input type="time" name="baslangic_saati" id="baslangic_saati" value="08:00" required>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{% url 'admin:production_isakisi_changelist' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> İptal
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-play"></i> İş Emirlerini Oluştur
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Bugünün tarihini varsayılan olarak ayarla
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('baslangic_tarihi').value = today;
+});
+
+function loadKalemler() {
+    const siparisSelect = document.getElementById('siparis');
+    const kalemSelect = document.getElementById('kalem');
+    const siparisId = siparisSelect.value;
+    
+    // Kalem select'i temizle
+    kalemSelect.innerHTML = '<option value="">-- Yükleniyor... --</option>';
+    kalemSelect.disabled = true;
+    
+    if (!siparisId) {
+        kalemSelect.innerHTML = '<option value="">-- Önce sipariş seçin --</option>';
+        return;
+    }
+    
+    // AJAX ile kalemleri yükle
+    fetch(`/admin/production/siparis/${siparisId}/kalemler/`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        kalemSelect.innerHTML = '<option value="">-- Kalem Seçin --</option>';
+        
+        data.kalemler.forEach(kalem => {
+            if (kalem.urun_id === {{ is_akisi.urun.id }}) {
+                const option = document.createElement('option');
+                option.value = kalem.id;
+                option.textContent = `${kalem.urun_ad} - ${kalem.miktar} ${kalem.birim}`;
+                kalemSelect.appendChild(option);
+            }
+        });
+        
+        kalemSelect.disabled = false;
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        kalemSelect.innerHTML = '<option value="">-- Hata oluştu --</option>';
+    });
+}
+</script>
+{% endblock %}

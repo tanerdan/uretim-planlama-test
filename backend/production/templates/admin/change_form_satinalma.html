@@ -1,0 +1,12 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if export_url and change %}
+    <li>
+        <a href="{{ export_url }}" class="addlink" target="_blank">
+            Yazdır / Export
+        </a>
+    </li>
+    {% endif %}
+{% endblock %}

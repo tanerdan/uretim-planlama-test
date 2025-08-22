@@ -1,0 +1,431 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Malzeme İhtiyaç Listesi{% endblock %}
+
+{% block content %}
+
+<div class="module">
+    <h2>Seçilen Siparişler</h2>
+    <ul style="margin-bottom: 20px; color: #333; background: white;">
+        {% for siparis in siparisler %}
+        <li style="color: #333;">{{ siparis.siparis_no }} - {{ siparis.musteri.ad }} ({{ siparis.teslim_tarihi|date:"d.m.Y" }})</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="module">
+    <h2>Hammadde İhtiyaç Listesi</h2>
+    <form method="post" id="malzeme-form">
+        {% csrf_token %}
+        <table id="result_list">
+        <thead>
+            <tr>
+                <th>Hammadde</th>
+                <th>Toplam Miktar</th>
+                <th>Birim</th>
+                <th>Kullanıldığı Ürünler</th>
+                <th>İlgili Siparişler</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for malzeme in malzeme_listesi %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td><strong>{{ malzeme.ad }}</strong></td>
+                <td>{{ malzeme.miktar|floatformat:2 }}</td>
+                <td>{{ malzeme.birim }}</td>
+                <td>
+                    {% for urun in malzeme.urunler %}
+                        <span class="tag">{{ urun }}</span>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for siparis_no in malzeme.siparisler %}
+                        <span class="tag siparis-tag" data-siparis="{{ siparis_no }}" style="cursor: pointer;">{{ siparis_no }}</span>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    <select name="islem_{{ malzeme.ad }}" class="islem-select" required style="padding: 5px;">
+                        <option value="">-- Seçiniz --</option>
+                        <option value="satin_al">Satın Al</option>
+                        <option value="stoktan_kullan">Stoktan Kullan</option>
+                    </select>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 20px;">
+                    Malzeme bulunamadı.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+            </table>
+        
+        <div class="submit-row" style="margin-top: 20px;">
+            <a href="{% url 'admin:production_malzemeplanlama_changelist' %}" class="button default" style="padding: 10px 20px; font-size: 14px; display: inline-block;">Geri Dön</a>
+            <button type="submit" class="button default" style="margin-left: 10px; padding: 10px 20px; font-size: 14px; display: inline-block; background-color: #5cb85c;">Onayla</button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .module {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    #result_list {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    
+    #result_list th {
+        background: #417690;
+        color: white;
+        padding: 10px;
+        text-align: left;
+        font-weight: bold;
+    }
+    
+    #result_list td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .row1 {
+        background: #f9f9f9;
+    }
+    
+    .row2 {
+        background: white;
+    }
+    
+    #result_list tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .tag {
+        background: #f0f0f0;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        display: inline-block;
+        margin: 2px;
+        color: #333;
+        border: 1px solid #ddd;
+    }
+    
+    .button {
+        background-color: #417690;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .button:hover {
+        background-color: #205067;
+    }
+    
+    @media print {
+        .submit-row {
+            display: none;
+        }
+    }
+    
+    /* Popup styles */
+    .popup-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+    }
+    
+    .popup-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        color: #333;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 90%;
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+        color: #333;
+    }
+    
+    .popup-close {
+        cursor: pointer;
+        font-size: 24px;
+        color: #666;
+        background: none;
+        border: none;
+    }
+
+    .popup-content h3, .popup-content h4 {
+        color: #333;
+    }
+
+    .popup-content td, .popup-content th {
+        color: #333;
+    }
+
+    .popup-close:hover {
+        color: #000;
+    }
+    
+    .siparis-tag:hover {
+        background-color: #417690;
+        color: white;
+    }
+    /* Popup tablo stilleri */
+    #onayPopup table thead tr {
+        background-color: #f0f0f0 !important;
+    }
+
+    #onayPopup table th {
+        background-color: transparent !important;
+        color: #333 !important;
+        font-weight: bold;
+    }
+
+    #onayPopup table td {
+        background-color: white !important;
+        color: #333 !important;
+    }
+
+    #siparisPopup table td {
+        background-color: white !important;
+        color: #333 !important;
+    }
+
+    .popup-content table {
+        border-collapse: collapse;
+    }
+
+    .popup-content table tr:hover {
+        background-color: #f9f9f9 !important;
+        border-collapse: collapse;
+    }
+</style>
+
+<!-- Popup HTML -->
+<div id="siparisPopup" class="popup-overlay">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 id="popupTitle">Sipariş Detayları</h3>
+            <button class="popup-close" onclick="closePopup()">&times;</button>
+        </div>
+        <div id="popupBody">
+            <!-- Sipariş detayları buraya gelecek -->
+        </div>
+    </div>
+</div>
+
+<!-- Onay Popup HTML -->
+<div id="onayPopup" class="popup-overlay">
+    <div class="popup-content" style="max-width: 600px;">
+        <div class="popup-header">
+            <h3>İşlem Onayı</h3>
+            <button class="popup-close" onclick="closeOnayPopup()">&times;</button>
+        </div>
+        <div id="onayPopupBody">
+            <!-- İşlem özeti buraya gelecek -->
+        </div>
+        <div class="popup-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; text-align: right;">
+            <button type="button" onclick="closeOnayPopup()" class="button" style="padding: 8px 20px; margin-right: 10px;">Vazgeç</button>
+            <button type="button" onclick="confirmIslemler()" class="button" style="padding: 8px 20px; background-color: #5cb85c;">Onayla</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Sipariş verilerini sakla
+var siparisData = {
+    {% for siparis in siparisler %}
+    "{{ siparis.siparis_no }}": {
+        "musteri": "{{ siparis.musteri.ad }}",
+        "tarih": "{{ siparis.tarih|date:'d.m.Y' }}",
+        "teslim_tarihi": "{{ siparis.teslim_tarihi|date:'d.m.Y' }}",
+        "kalemler": [
+            {% for kalem in siparis.kalemler.all %}
+            {
+                "urun": "{{ kalem.urun.ad }}",
+                "miktar": "{{ kalem.miktar }}",
+                "birim": "{{ kalem.urun.birim }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+// Sipariş tag'lerine click event ekle
+document.addEventListener('DOMContentLoaded', function() {
+    var siparisTags = document.querySelectorAll('.siparis-tag');
+    siparisTags.forEach(function(tag) {
+        tag.addEventListener('click', function() {
+            var siparisNo = this.getAttribute('data-siparis');
+            showSiparisPopup(siparisNo);
+        });
+    });
+});
+
+function showSiparisPopup(siparisNo) {
+    var siparis = siparisData[siparisNo];
+    if (!siparis) return;
+    
+    var popupTitle = document.getElementById('popupTitle');
+    var popupBody = document.getElementById('popupBody');
+    
+    popupTitle.textContent = 'Sipariş: ' + siparisNo;
+    
+    var content = '<table style="width: 100%;">';
+    content += '<tr><td><strong>Müşteri:</strong></td><td>' + siparis.musteri + '</td></tr>';
+    content += '<tr><td><strong>Sipariş Tarihi:</strong></td><td>' + siparis.tarih + '</td></tr>';
+    content += '<tr><td><strong>Teslim Tarihi:</strong></td><td>' + siparis.teslim_tarihi + '</td></tr>';
+    content += '</table>';
+    
+    content += '<h4 style="margin-top: 15px;">Sipariş Kalemleri:</h4>';
+    content += '<table style="width: 100%; border-collapse: collapse;">';
+    content += '<thead><tr style="background: #f0f0f0;"><th style="padding: 5px; text-align: left;">Ürün</th><th style="padding: 5px; text-align: left;">Miktar</th></tr></thead>';
+    content += '<tbody>';
+    
+    siparis.kalemler.forEach(function(kalem) {
+        content += '<tr style="border-bottom: 1px solid #ddd;">';
+        content += '<td style="padding: 5px;">' + kalem.urun + '</td>';
+        content += '<td style="padding: 5px;">' + kalem.miktar + ' ' + kalem.birim + '</td>';
+        content += '</tr>';
+    });
+    
+    content += '</tbody></table>';
+    
+    popupBody.innerHTML = content;
+    document.getElementById('siparisPopup').style.display = 'block';
+}
+
+function closePopup() {
+    document.getElementById('siparisPopup').style.display = 'none';
+}
+
+// Overlay'e tıklandığında popup'ı kapat
+document.getElementById('siparisPopup').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePopup();
+    }
+});
+
+// Form validation ve onay popup
+document.getElementById('malzeme-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    var selects = document.querySelectorAll('.islem-select');
+    var allSelected = true;
+    var satinAlList = [];
+    var stoktanKullanList = [];
+    
+    selects.forEach(function(select) {
+        if (!select.value) {
+            allSelected = false;
+            select.style.borderColor = 'red';
+        } else {
+            select.style.borderColor = '';
+            
+            // Malzeme adını ve miktarı bul
+            var row = select.closest('tr');
+            var malzemeAd = row.cells[0].textContent.trim();
+            var miktar = row.cells[1].textContent.trim();
+            var birim = row.cells[2].textContent.trim();
+            
+            if (select.value === 'satin_al') {
+                satinAlList.push({ad: malzemeAd, miktar: miktar, birim: birim});
+            } else if (select.value === 'stoktan_kullan') {
+                stoktanKullanList.push({ad: malzemeAd, miktar: miktar, birim: birim});
+            }
+        }
+    });
+    
+    if (!allSelected) {
+        alert('Lütfen tüm malzemeler için işlem seçimi yapın!');
+        return false;
+    }
+    
+    // Onay popup'ını göster
+    showOnayPopup(satinAlList, stoktanKullanList);
+});
+
+function showOnayPopup(satinAlList, stoktanKullanList) {
+    var content = '';
+    
+    if (satinAlList.length > 0) {
+        content += '<h4>Satın Alınacak Malzemeler:</h4>';
+        content += '<table style="width: 100%; margin-bottom: 15px;">';
+        content += '<thead><tr style="background: #f0f0f0;"><th style="padding: 5px;">Malzeme</th><th style="padding: 5px;">Miktar</th></tr></thead>';
+        content += '<tbody>';
+        satinAlList.forEach(function(item) {
+            content += '<tr style="border-bottom: 1px solid #ddd;">';
+            content += '<td style="padding: 5px;">' + item.ad + '</td>';
+            content += '<td style="padding: 5px;">' + item.miktar + ' ' + item.birim + '</td>';
+            content += '</tr>';
+        });
+        content += '</tbody></table>';
+    }
+    
+    if (stoktanKullanList.length > 0) {
+        content += '<h4>Stoktan Kullanılacak Malzemeler:</h4>';
+        content += '<table style="width: 100%;">';
+        content += '<thead><tr style="background: #f0f0f0;"><th style="padding: 5px;">Malzeme</th><th style="padding: 5px;">Miktar</th></tr></thead>';
+        content += '<tbody>';
+        stoktanKullanList.forEach(function(item) {
+            content += '<tr style="border-bottom: 1px solid #ddd;">';
+            content += '<td style="padding: 5px;">' + item.ad + '</td>';
+            content += '<td style="padding: 5px;">' + item.miktar + ' ' + item.birim + '</td>';
+            content += '</tr>';
+        });
+        content += '</tbody></table>';
+    }
+    
+    document.getElementById('onayPopupBody').innerHTML = content;
+    document.getElementById('onayPopup').style.display = 'block';
+}
+
+function closeOnayPopup() {
+    document.getElementById('onayPopup').style.display = 'none';
+}
+
+function confirmIslemler() {
+    // Formu gerçekten submit et
+    document.getElementById('malzeme-form').submit();
+}
+
+// Onay overlay'e tıklandığında popup'ı kapat
+document.getElementById('onayPopup').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeOnayPopup();
+    }
+});
+</script>
+{% endblock %}

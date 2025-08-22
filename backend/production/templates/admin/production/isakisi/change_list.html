@@ -1,0 +1,132 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block content_title %}
+    <h1>İş Akışları</h1>
+    <div style="margin: 10px 0;">
+        <a href="{% url 'admin:production_isakisi_gorsel_tasarim' %}" class="btn btn-success" style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">
+            <i class="fas fa-project-diagram"></i> Görsel İş Akışı Tasarımı
+        </a>
+        <a href="{% url 'admin:production_isakisi_add' %}" class="btn btn-primary" style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            <i class="fas fa-plus"></i> Geleneksel Ekleme
+        </a>
+    </div>
+{% endblock %}
+
+{% block result_list %}
+    <style>
+        .btn {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            text-decoration: none;
+            margin: 2px;
+        }
+        
+        .btn:hover {
+            text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .visual-editor-column, .work-order-column {
+            width: 90px;
+        }
+    </style>
+    
+    <!-- Mevcut tablo -->
+    {{ block.super }}
+    
+    <!-- JavaScript to add visual editor links -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('İş akışları listesi yüklendi');
+        
+        // Tablo var mı kontrol et
+        const table = document.querySelector('.results table');
+        if (!table) {
+            console.log('Tablo bulunamadı');
+            return;
+        }
+        
+        // Header'lar ekle
+        const headerRow = document.querySelector('.results table thead tr');
+        if (headerRow) {
+            // Görsel Editor header
+            const editorHeader = document.createElement('th');
+            editorHeader.className = 'visual-editor-column';
+            editorHeader.innerHTML = '<div class="text">Görsel Editor</div>';
+            headerRow.appendChild(editorHeader);
+            
+            // İş Emirleri header
+            const workOrderHeader = document.createElement('th');
+            workOrderHeader.className = 'work-order-column';
+            workOrderHeader.innerHTML = '<div class="text">İş Emirleri</div>';
+            headerRow.appendChild(workOrderHeader);
+            
+            console.log('Header\'lar eklendi');
+        }
+        
+        // Her satıra buton ekle
+        const rows = document.querySelectorAll('.results table tbody tr');
+        console.log(`${rows.length} satır bulundu`);
+        
+        rows.forEach(function(row, index) {
+            // İlk hücreyi bul (th veya td olabilir)
+            const firstCell = row.querySelector('th') || row.querySelector('td');
+            
+            if (firstCell) {
+                const link = firstCell.querySelector('a');
+                if (link) {
+                    const href = link.getAttribute('href');
+                    console.log(`Satır ${index}: ${href}`);
+                    
+                    // URL'den ID çıkar: /admin/production/isakisi/1/change/
+                    const match = href.match(/\/(\d+)\/change\//);
+                    if (match) {
+                        const objectId = match[1];
+                        console.log(`ID bulundu: ${objectId}`);
+                        
+                        // Görsel Editor butonu
+                        const editorCell = document.createElement('td');
+                        editorCell.className = 'visual-editor-column';
+                        editorCell.innerHTML = `
+                            <a href="/admin/production/isakisi/${objectId}/gorsel-editor/" 
+                               class="btn" 
+                               style="background: #17a2b8; color: white; font-size: 12px; padding: 4px 8px; text-decoration: none; border-radius: 3px;"
+                               title="Görsel Editor">
+                                <i class="fas fa-edit"></i> Editor
+                            </a>
+                        `;
+                        row.appendChild(editorCell);
+                        
+                        // İş Emirleri Oluştur butonu
+                        const workOrderCell = document.createElement('td');
+                        workOrderCell.className = 'work-order-column';
+                        workOrderCell.innerHTML = `
+                            <a href="/admin/production/isakisi/${objectId}/is-emirleri-olustur/" 
+                               class="btn" 
+                               style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px; text-decoration: none; border-radius: 3px;"
+                               title="İş Emirleri Oluştur">
+                                <i class="fas fa-play"></i> İş Emri
+                            </a>
+                        `;
+                        row.appendChild(workOrderCell);
+                        
+                        console.log(`Butonlar eklendi: ${objectId}`);
+                    }
+                }
+            }
+        });
+    });
+    </script>
+{% endblock %}

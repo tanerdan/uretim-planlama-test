@@ -1,0 +1,436 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .visual-workflow-container {
+        display: flex;
+        height: 80vh;
+        margin: 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .sidebar {
+        width: 300px;
+        background: #f8f9fa;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+    }
+    
+    .sidebar-header {
+        background: #17a2b8;
+        color: white;
+        padding: 15px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .workflow-info {
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        background: white;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+        padding: 5px 0;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .operations-list {
+        padding: 15px;
+    }
+    
+    .operation-item {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+        margin: 8px 0;
+        border-left: 4px solid #007bff;
+    }
+    
+    .operation-title {
+        font-weight: bold;
+        color: #212529;
+        margin-bottom: 5px;
+    }
+    
+    .operation-details {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    
+    .canvas-area {
+        flex: 1;
+        background: #ffffff;
+        position: relative;
+        overflow: auto;
+        background-image: radial-gradient(circle, #e0e0e0 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    
+    .canvas-header {
+        background: #17a2b8;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .workflow-canvas {
+        min-height: 600px;
+        padding: 20px;
+        position: relative;
+    }
+    
+    .step-card {
+        position: absolute;
+        background: white;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        padding: 15px;
+        min-width: 150px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        cursor: move;
+    }
+    
+    .step-card .step-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #007bff;
+    }
+    
+    .step-card .step-details {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .connection-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .connection-arrow {
+        stroke: #007bff;
+        stroke-width: 2;
+        fill: none;
+        marker-end: url(#arrowhead);
+    }
+    
+    .controls {
+        padding: 20px;
+        background: #f8f9fa;
+        border-top: 1px solid #ddd;
+        text-align: center;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s;
+        margin: 0 5px;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <div class="visual-workflow-container">
+        <!-- Sol Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-project-diagram"></i> İş Akışı Detayları
+            </div>
+            
+            <!-- Workflow Bilgileri -->
+            <div class="workflow-info">
+                <h5 style="margin-bottom: 15px; color: #17a2b8;">{{ is_akisi.ad }}</h5>
+                
+                <div class="info-item">
+                    <span class="info-label">Kod:</span>
+                    <span>{{ is_akisi.kod }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Ürün:</span>
+                    <span>{{ is_akisi.urun.ad }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Tip:</span>
+                    <span>{{ is_akisi.get_tip_display }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Versiyon:</span>
+                    <span>{{ is_akisi.versiyon }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Operasyon Sayısı:</span>
+                    <span>{{ mevcut_operasyonlar.count }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Toplam Süre:</span>
+                    <span>{{ is_akisi.tahmini_sure|floatformat:0 }} dakika</span>
+                </div>
+                
+                {% if is_akisi.aciklama %}
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <div class="info-label">Açıklama:</div>
+                    <div style="margin-top: 5px; font-size: 13px; color: #666;">{{ is_akisi.aciklama }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Operasyon Listesi -->
+            <div class="operations-list">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #495057;">
+                    <i class="fas fa-list"></i> Operasyonlar
+                </div>
+                
+                {% for operasyon in mevcut_operasyonlar %}
+                <div class="operation-item" data-operation-id="{{ operasyon.id }}">
+                    <div class="operation-title">
+                        {{ operasyon.sira_no|stringformat:"02d" }}. {{ operasyon.operasyon_adi }}
+                    </div>
+                    <div class="operation-details">
+                        <i class="fas fa-industry"></i> {{ operasyon.istasyon.ad }}<br>
+                        <i class="fas fa-clock"></i> {{ operasyon.standart_sure }} dk/adet
+                        {% if operasyon.hazirlik_suresi > 0 %}
+                        + {{ operasyon.hazirlik_suresi }} dk hazırlık
+                        {% endif %}
+                        {% if operasyon.kritik %}
+                        <br><span style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Kritik</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-header">
+                <i class="fas fa-eye"></i> {{ is_akisi.ad }} - Görsel Görünüm
+                <div style="font-size: 14px; margin-top: 5px;">
+                    Operasyonlar ve bağımlılık ilişkileri
+                </div>
+            </div>
+            
+            <div id="workflow-canvas" class="workflow-canvas">
+                <!-- SVG for connections -->
+                <svg id="connections-svg" class="connection-svg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kontroller -->
+    <div class="controls">
+        <a href="{% url 'admin:production_isakisi_changelist' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> İş Akışları Listesi
+        </a>
+        <a href="{% url 'admin:production_isakisi_change' is_akisi.id %}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Düzenle
+        </a>
+        <button type="button" class="btn btn-success" id="create-work-order">
+            <i class="fas fa-play"></i> İş Emri Oluştur
+        </button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('workflow-canvas');
+    const svg = document.getElementById('connections-svg');
+    
+    // Operasyon verilerini JavaScript'e aktar
+    const operations = [
+        {% for operasyon in mevcut_operasyonlar %}
+        {
+            id: {{ operasyon.id|default:0 }},
+            sira_no: {% if operasyon.sira_no %}{{ operasyon.sira_no }}{% else %}1{% endif %},
+            ad: "{{ operasyon.operasyon_adi|escapejs|default:'Boş' }}",
+            istasyon: "{% if operasyon.istasyon %}{{ operasyon.istasyon.ad|escapejs }}{% else %}Bilinmeyen{% endif %}",
+            sure: {% if operasyon.standart_sure %}{{ operasyon.standart_sure|floatformat:0 }}{% else %}0{% endif %},
+            kritik: {% if operasyon.kritik %}true{% else %}false{% endif %},
+            onceki_operasyonlar: [
+                {% for onceki in operasyon.onceki_operasyonlar.all %}
+                {{ onceki.id }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // Operasyon verilerini kontrol et
+    console.log('Operasyonlar:', operations);
+    
+    // Operasyonları görsel olarak yerleştir
+    let stepCards = {};
+    let connections = [];
+    
+    if (operations.length === 0) {
+        canvas.innerHTML = '<div style="text-align: center; color: #6c757d; margin-top: 100px;"><i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 20px;"></i><h3>Bu iş akışında operasyon bulunamadı</h3><p>İş akışı oluşturulmuş ancak operasyon tanımlanmamış olabilir.</p></div>';
+    } else {
+        operations.forEach((op, index) => {
+            console.log(`Operasyon ${index}:`, op);
+            createOperationCard(op, index);
+        });
+        
+        // Bağlantıları çiz
+        setTimeout(() => {
+            operations.forEach(op => {
+                op.onceki_operasyonlar.forEach(oncekiId => {
+                    console.log(`Bağlantı çiziliyor: ${oncekiId} -> ${op.id}`);
+                    drawConnection(oncekiId, op.id);
+                });
+            });
+        }, 100);
+    }
+    
+    function createOperationCard(operation, index) {
+        const stepCard = document.createElement('div');
+        stepCard.className = 'step-card';
+        stepCard.id = `operation-${operation.id}`;
+        
+        // Otomatik yerleştirme (grid layout)
+        const x = 50 + (index % 3) * 200;
+        const y = 50 + Math.floor(index / 3) * 120;
+        
+        stepCard.style.left = x + 'px';
+        stepCard.style.top = y + 'px';
+        
+        // Kritik operasyon için farklı stil
+        if (operation.kritik) {
+            stepCard.style.borderColor = '#dc3545';
+            stepCard.style.backgroundColor = '#fff5f5';
+        }
+        
+        stepCard.innerHTML = `
+            <div class="step-title">${operation.sira_no.toString().padStart(2, '0')}. ${operation.ad}</div>
+            <div class="step-details">
+                <i class="fas fa-industry"></i> ${operation.istasyon}<br>
+                <i class="fas fa-clock"></i> ${operation.sure} dk/adet
+                ${operation.kritik ? '<br><span style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Kritik</span>' : ''}
+            </div>
+        `;
+        
+        canvas.appendChild(stepCard);
+        stepCards[operation.id] = stepCard;
+    }
+    
+    function drawConnection(fromId, toId) {
+        const fromEl = stepCards[fromId];
+        const toEl = stepCards[toId];
+        
+        if (!fromEl || !toEl) return;
+        
+        // Element pozisyonlarını al
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        const fromX = fromRect.left - canvasRect.left + fromRect.width / 2;
+        const fromY = fromRect.top - canvasRect.top + fromRect.height / 2;
+        const toX = toRect.left - canvasRect.left + toRect.width / 2;
+        const toY = toRect.top - canvasRect.top + toRect.height / 2;
+        
+        // Kenar noktalarını hesapla
+        const fromEdge = getCardEdgePoint(fromX, fromY, fromRect.width / 2, fromRect.height / 2, toX, toY);
+        const toEdge = getCardEdgePoint(toX, toY, toRect.width / 2, toRect.height / 2, fromX, fromY);
+        
+        // SVG path oluştur
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.classList.add('connection-arrow');
+        
+        // Eğrisel path
+        const controlX = (fromEdge.x + toEdge.x) / 2;
+        const controlY = Math.min(fromEdge.y, toEdge.y) - 20;
+        
+        const pathData = `M ${fromEdge.x} ${fromEdge.y} Q ${controlX} ${controlY} ${toEdge.x} ${toEdge.y}`;
+        path.setAttribute('d', pathData);
+        
+        svg.appendChild(path);
+    }
+    
+    function getCardEdgePoint(centerX, centerY, halfWidth, halfHeight, targetX, targetY) {
+        const dx = targetX - centerX;
+        const dy = targetY - centerY;
+        const slope = dy / dx;
+        
+        let edgeX, edgeY;
+        
+        if (Math.abs(dx) > Math.abs(dy)) {
+            edgeX = centerX + (dx > 0 ? halfWidth : -halfWidth);
+            edgeY = centerY + slope * (dx > 0 ? halfWidth : -halfWidth);
+        } else {
+            edgeY = centerY + (dy > 0 ? halfHeight : -halfHeight);
+            edgeX = centerX + (dy > 0 ? halfHeight : -halfHeight) / slope;
+        }
+        
+        return { x: edgeX, y: edgeY };
+    }
+    
+    // İş emri oluştur butonu
+    document.getElementById('create-work-order').addEventListener('click', function() {
+        if (confirm('Bu iş akışı için yeni bir iş emri oluşturmak istediğinizden emin misiniz?')) {
+            window.location.href = `/admin/production/isemri/add/?is_akisi={{ is_akisi.id }}`;
+        }
+    });
+});
+</script>
+{% endblock %}

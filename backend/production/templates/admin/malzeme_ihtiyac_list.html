@@ -1,0 +1,427 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content %}
+{{ block.super }}
+
+{% if cl.result_count > 0 %}
+<div style="margin: 10px 0;">
+    <button type="button" id="satinAlmaBtn" class="button" style="background-color: #5cb85c; color: white; padding: 10px 20px; display: none;">
+        Satın Alma Siparişi Oluştur
+    </button>
+</div>
+{% endif %}
+
+<!-- Satın Alma Popup -->
+<div id="satinAlmaPopup" class="popup-overlay" style="display: none;">
+    <div class="popup-content" style="max-width: 800px; width: 90%;">
+        <div class="popup-header">
+            <h3>Satın Alma Siparişi Oluştur</h3>
+            <button class="popup-close" onclick="closeSatinAlmaPopup()">&times;</button>
+        </div>
+        <form id="satinAlmaForm" method="post">
+            {% csrf_token %}
+            <div class="popup-body" style="max-height: 60vh; overflow-y: auto;">
+                <!-- Tedarikçi ve Genel Bilgiler -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+                    <h4 style="font-family: inherit; color: #333;">Sipariş Bilgileri</h4>
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="padding: 5px;">
+                                <label for="tedarikci" style="font-family: inherit;">Tedarikçi:</label>
+                                <select id="tedarikci" name="tedarikci" required style="width: 100%; padding: 5px;">
+                                    <option value="">-- Seçiniz --</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- Malzeme Listesi -->
+                <h4>Malzemeler</h4>
+                <table id="malzemeTable" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #417690; color: white;">
+                            <th style="padding: 8px;">Malzeme</th>
+                            <th style="padding: 8px;">Miktar</th>
+                            <th style="padding: 8px;">Birim</th>
+                            <th style="padding: 8px;" colspan="2">Birim Fiyat</th>
+                            <th style="padding: 8px;">Toplam</th>
+                            <th style="padding: 8px;">Teslim Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="malzemeListesi">
+                        <!-- JavaScript ile doldurulacak -->
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f0f0f0; font-weight: bold;">
+                            <td colspan="4" style="padding: 8px; text-align: right;">GENEL TOPLAM:</td>
+                            <td style="padding: 8px;" id="genelToplam">0.00 TL</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="popup-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; text-align: right;">
+                <button type="button" onclick="closeSatinAlmaPopup()" class="button" style="margin-right: 10px;">Vazgeç</button>
+                <button type="button" onclick="siparisOlustur()" class="button" style="background-color: #5cb85c; color: white;">Sipariş Oluştur</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+.popup-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.popup-close {
+    cursor: pointer;
+    font-size: 24px;
+    color: #666;
+    background: none;
+    border: none;
+}
+
+.popup-close:hover {
+    color: #000;
+}
+
+.satin-alma-checkbox {
+    cursor: pointer;
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+#malzemeTable td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+.action-checkbox-column,
+.action-checkbox {
+    display: none !important;
+}
+
+/* Popup renk düzeltmeleri */
+.popup-content h3, .popup-content h4 {
+    color: #333;
+}
+
+.popup-content label {
+    color: #333;
+    font-weight: bold;
+}
+
+.popup-content table {
+    color: #333;
+}
+
+.popup-content td, .popup-content th {
+    color: #333;
+}
+
+.popup-body {
+    background: white;
+    color: #333;
+}
+
+#malzemeTable thead tr {
+    background: #417690 !important;
+    color: white !important;
+}
+
+#malzemeTable thead th {
+    color: white !important;
+}
+
+#malzemeTable tbody td {
+    background: white;
+    color: #333;
+}
+
+#malzemeTable tfoot td {
+    background: #f0f0f0 !important;
+    color: #333 !important;
+}
+
+select, input[type="date"], input[type="number"] {
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+}
+</style>
+
+<script>
+var selectedMalzemeler = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox değişimlerini dinle
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('satin-alma-checkbox')) {
+            updateSelectedMalzemeler();
+        }
+    });
+    
+    // Tedarikçileri yükle
+    loadTedarikciler();
+    
+    
+});
+
+function updateSelectedMalzemeler() {
+    selectedMalzemeler = [];
+    var checkboxes = document.querySelectorAll('.satin-alma-checkbox:checked');
+    
+    checkboxes.forEach(function(cb) {
+        selectedMalzemeler.push({
+            id: cb.dataset.id,
+            malzeme: cb.dataset.malzeme,
+            miktar: parseFloat(cb.dataset.miktar),
+            birim: cb.dataset.birim
+        });
+    });
+    
+    // Buton görünürlüğünü ayarla
+    var btn = document.getElementById('satinAlmaBtn');
+    if (selectedMalzemeler.length > 0) {
+        btn.style.display = 'inline-block';
+        btn.textContent = 'Satın Alma Siparişi Oluştur (' + selectedMalzemeler.length + ' kalem)';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+document.getElementById('satinAlmaBtn').addEventListener('click', function() {
+    if (selectedMalzemeler.length === 0) {
+        alert('Lütfen en az bir malzeme seçin!');
+        return;
+    }
+    
+    // Popup'ı aç ve malzemeleri listele
+    showSatinAlmaPopup();
+});
+
+function showSatinAlmaPopup() {
+    var tbody = document.getElementById('malzemeListesi');
+    tbody.innerHTML = '';
+    
+    // Varsayılan teslim tarihi (7 gün sonra)
+    var varsayilanTeslim = new Date();
+    varsayilanTeslim.setDate(varsayilanTeslim.getDate() + 7);
+    var teslimStr = varsayilanTeslim.toISOString().split('T')[0];
+    
+    selectedMalzemeler.forEach(function(item, index) {
+        var row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${item.malzeme}</td>
+            <td>
+                <input type="number" step="0.01" min="0" id="miktar_${index}" 
+                       value="${item.miktar}" onchange="hesaplaToplamlar()" style="width: 80px;">
+            </td>
+            <td>${item.birim}</td>
+            <td>
+                <input type="number" step="0.01" min="0" id="fiyat_${index}" 
+                       onchange="hesaplaToplamlar()" placeholder="0.00" required style="width: 80px;">
+            </td>
+            <td>
+                <select id="kur_${index}" onchange="hesaplaToplamlar()" style="width: 70px; padding: 3px;">
+                    <option value="TL">TL</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="CHF">CHF</option>
+                    <option value="JPY">JPY</option>
+                    <option value="CNY">CNY</option>
+                </select>
+            </td>
+            <td id="toplam_${index}">0.00 TL</td>
+            <td>
+                <input type="date" id="teslim_${index}" value="${teslimStr}" required style="width: 130px;">
+            </td>
+        `;
+    });
+    
+    document.getElementById('satinAlmaPopup').style.display = 'block';
+}
+
+function closeSatinAlmaPopup() {
+    document.getElementById('satinAlmaPopup').style.display = 'none';
+}
+
+function hesaplaToplamlar() {
+    var satirToplamlar = {}; // Her para birimi için toplam
+    
+    selectedMalzemeler.forEach(function(item, index) {
+        var miktarInput = document.getElementById('miktar_' + index);
+        var fiyatInput = document.getElementById('fiyat_' + index);
+        var kurSelect = document.getElementById('kur_' + index);
+        var toplamTd = document.getElementById('toplam_' + index);
+        
+        if (fiyatInput.value && miktarInput.value) {
+            var miktar = parseFloat(miktarInput.value) || 0;
+            var birimFiyat = parseFloat(fiyatInput.value) || 0;
+            var kur = kurSelect.value;
+            var toplam = miktar * birimFiyat;
+            
+            toplamTd.innerHTML = toplam.toFixed(2) + ' ' + kur;
+            
+            // Para birimine göre toplamları grupla
+            if (!satirToplamlar[kur]) {
+                satirToplamlar[kur] = 0;
+            }
+            satirToplamlar[kur] += toplam;
+        }
+    });
+    
+    // Genel toplamı göster (birden fazla para birimi varsa hepsini göster)
+    var genelToplamText = [];
+    for (var kur in satirToplamlar) {
+        genelToplamText.push(satirToplamlar[kur].toFixed(2) + ' ' + kur);
+    }
+    document.getElementById('genelToplam').innerHTML = genelToplamText.join(' + ');
+}
+
+function updateCurrency() {
+    hesaplaToplamlar();
+}
+
+function loadTedarikciler() {
+    var select = document.getElementById('tedarikci');
+    select.innerHTML = '<option value="">-- Seçiniz --</option>';
+    
+    // Django template değişkenlerini JavaScript'e aktar
+    var tedarikciler = [
+        {% for tedarikci in tedarikciler %}
+        {
+            id: {{ tedarikci.id }},
+            kod: '{{ tedarikci.kod }}',
+            ad: '{{ tedarikci.ad|escapejs }}'
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // Tedarikçileri dropdown'a ekle
+    tedarikciler.forEach(function(tedarikci) {
+        var option = document.createElement('option');
+        option.value = tedarikci.id;
+        option.textContent = tedarikci.kod + ' - ' + tedarikci.ad;
+        select.appendChild(option);
+    });
+}
+
+function siparisOlustur() {
+    console.log('Sipariş oluştur tıklandı');
+    // Form validasyonu
+    var tedarikci = document.getElementById('tedarikci').value;
+    
+    console.log('Tedarikçi:', tedarikci);
+
+    if (!tedarikci) {
+        alert('Lütfen tedarikçi seçin!');
+        return;
+    }
+    
+    // Tüm fiyatlar girilmiş mi kontrol et
+    var fiyatlarGirildi = true;
+    selectedMalzemeler.forEach(function(item, index) {
+        var fiyatInput = document.getElementById('fiyat_' + index);
+        if (!fiyatInput.value || parseFloat(fiyatInput.value) <= 0) {
+            fiyatlarGirildi = false;
+        }
+    });
+    
+    if (!fiyatlarGirildi) {
+        alert('Lütfen tüm malzemeler için birim fiyat girin!');
+        return;
+    }
+    
+    // Verileri hazırla
+    var siparisData = {
+        tedarikci: tedarikci,
+        malzemeler: []
+    };
+    
+    selectedMalzemeler.forEach(function(item, index) {
+        var miktar = parseFloat(document.getElementById('miktar_' + index).value);
+        var birimFiyat = parseFloat(document.getElementById('fiyat_' + index).value);
+        var teslimTarihi = document.getElementById('teslim_' + index).value;
+        var paraBirimi = document.getElementById('kur_' + index).value;
+        
+        siparisData.malzemeler.push({
+            malzeme_ihtiyac_id: item.id,
+            malzeme_adi: item.malzeme,
+            miktar: miktar,
+            birim: item.birim,
+            birim_fiyat: birimFiyat,
+            para_birimi: paraBirimi,
+            teslim_tarihi: teslimTarihi
+        });
+    });
+    
+    // Onay mesajı
+    if (confirm('Satın alma siparişi oluşturulacak. Onaylıyor musunuz?')) {
+        // Form oluştur ve gönder
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.href;
+        
+        // CSRF token
+        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        // Action
+        var actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'satin_alma_olustur';
+        form.appendChild(actionInput);
+        
+        // Data
+        var dataInput = document.createElement('input');
+        dataInput.type = 'hidden';
+        dataInput.name = 'siparis_data';
+        dataInput.value = JSON.stringify(siparisData);
+        form.appendChild(dataInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

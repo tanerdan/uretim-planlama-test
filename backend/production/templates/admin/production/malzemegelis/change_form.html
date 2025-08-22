@@ -1,0 +1,86 @@
+{% extends "admin/change_form.html" %}
+
+{% block admin_change_form_document_ready %}
+    {{ block.super }}
+    <script>
+    (function() {
+        'use strict';
+        
+        // Django jQuery'i kullan
+        var $ = django.jQuery;
+        
+        // Toplam tutarı hesapla
+        function calculateTotal() {
+            var gelenMiktar = parseFloat($('#id_gelen_miktar').val()) || 0;
+            var birimFiyat = parseFloat($('#id_birim_fiyat').val()) || 0;
+            var toplam = gelenMiktar * birimFiyat;
+            
+            var toplamTutarField = $('#id_toplam_tutar');
+            console.log('Toplam tutar alanı var mı:', toplamTutarField.length);
+            console.log('Toplam tutar alanı readonly mu:', toplamTutarField.prop('readonly'));
+            
+            if (toplamTutarField.length > 0) {
+                toplamTutarField.val(toplam.toFixed(4));
+                console.log('Toplam tutar güncellendi:', toplam.toFixed(4));
+            } else {
+                console.log('Toplam tutar alanı bulunamadı!');
+            }
+            
+            console.log('Toplam hesaplandı:', toplam);
+        }
+        
+        // Malzeme kalemi seçildiğinde birim bilgisini güncelle
+        function updateBirimInfo() {
+            var kalemiSelect = $('#id_satinalma_kalemi');
+            var gelenMiktarContainer = $('#id_gelen_miktar').closest('.form-row');
+            
+            if (kalemiSelect.val()) {
+                var selectedText = kalemiSelect.find('option:selected').text();
+                console.log('Seçilen kalem:', selectedText);
+                
+                // "Malzeme Adı - 100 birim (SA-123)" formatından birim çıkar
+                var parts = selectedText.split(' - ');
+                if (parts.length > 1) {
+                    var miktarBirimKismi = parts[1]; // "100 kg (SA-123)" kısmı
+                    var birimMatch = miktarBirimKismi.match(/[\d.]+\s+(\w+)/);
+                    if (birimMatch) {
+                        var birim = birimMatch[1];
+                        console.log('Bulunan birim:', birim);
+                        
+                        // Mevcut birim bilgisini temizle
+                        gelenMiktarContainer.find('.birim-info').remove();
+                        
+                        // Yeni birim bilgisini ekle
+                        gelenMiktarContainer.append('<p class="help birim-info" style="color: #666; font-size: 11px; margin-top: 2px;">Birim: <strong>' + birim + '</strong></p>');
+                        
+                        // Label'ı da güncelle
+                        var gelenMiktarLabel = $('label[for="id_gelen_miktar"]');
+                        var originalLabel = gelenMiktarLabel.text().replace(/\s*\([^)]*\)$/, ''); // Eski birim bilgisini temizle
+                        gelenMiktarLabel.text(originalLabel + ' (' + birim + ')');
+                    }
+                }
+            } else {
+                // Seçim yoksa birim bilgisini temizle
+                gelenMiktarContainer.find('.birim-info').remove();
+                var gelenMiktarLabel = $('label[for="id_gelen_miktar"]');
+                gelenMiktarLabel.text('Gelen Miktar');
+            }
+        }
+        
+        // Event listener'ları ekle
+        $('#id_satinalma_kalemi').change(function() {
+            updateBirimInfo();
+            calculateTotal();
+        });
+        
+        $('#id_gelen_miktar, #id_birim_fiyat').on('input change keyup', calculateTotal);
+        
+        // Sayfa yüklendiğinde çalıştır
+        setTimeout(function() {
+            updateBirimInfo();
+            calculateTotal();
+        }, 100);
+        
+    })();
+    </script>
+{% endblock %}

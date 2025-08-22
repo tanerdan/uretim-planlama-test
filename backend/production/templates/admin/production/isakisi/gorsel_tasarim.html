@@ -1,0 +1,1181 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .visual-workflow-container {
+        display: flex;
+        height: 80vh;
+        margin: 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .sidebar {
+        width: 250px;
+        background: #f8f9fa;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+    }
+    
+    .sidebar-header {
+        background: #007bff;
+        color: white;
+        padding: 15px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .product-selector {
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .bom-items, .standard-steps {
+        padding: 15px;
+    }
+    
+    .bom-item, .standard-step {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 10px;
+        margin: 8px 0;
+        cursor: grab;
+        transition: all 0.2s;
+        color: #333;
+    }
+    
+    .bom-item:hover, .standard-step:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .standard-step {
+        border-left: 4px solid #007bff;
+    }
+    
+    .bom-item .step-title,
+    .standard-step .step-title {
+        color: #212529;
+        font-weight: 600;
+    }
+    
+    .bom-item .step-details,
+    .standard-step .step-details {
+        color: #6c757d;
+        font-size: 12px;
+    }
+    
+    .canvas-area {
+        flex: 1;
+        background: #ffffff;
+        position: relative;
+        overflow: auto;
+        background-image: radial-gradient(circle, #e0e0e0 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    
+    .canvas-header {
+        background: #28a745;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .workflow-canvas {
+        min-height: 600px;
+        padding: 20px;
+        position: relative;
+    }
+    
+    .step-card {
+        position: absolute;
+        background: white;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        padding: 15px;
+        min-width: 150px;
+        cursor: move;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .step-card.bom-step {
+        border-color: #dc3545;
+        background: #fff5f5;
+    }
+    
+    .step-card .step-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .step-card .step-details {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .connection-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .connection-arrow {
+        stroke: #007bff;
+        stroke-width: 2;
+        fill: none;
+        marker-end: url(#arrowhead);
+    }
+    
+    .connection-arrow.selected {
+        stroke: #28a745;
+        stroke-width: 3;
+    }
+    
+    .step-card.selected {
+        border-color: #28a745;
+        box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+    }
+    
+    .step-card.connecting {
+        border-color: #ffc107;
+        box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+    }
+    
+    .connection-button {
+        position: absolute;
+        top: 5px;
+        right: 25px;
+        width: 16px;
+        height: 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .connection-button:hover {
+        background: #0056b3;
+    }
+    
+    .category-header {
+        font-weight: bold;
+        color: #495057;
+        margin: 15px 0 5px 0;
+        padding: 5px 0;
+        border-bottom: 1px solid #dee2e6;
+        font-size: 14px;
+    }
+    
+    .controls {
+        padding: 20px;
+        background: #f8f9fa;
+        border-top: 1px solid #ddd;
+        text-align: center;
+    }
+    
+    .btn-group {
+        display: inline-flex;
+        gap: 10px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Kullanılan malzemeler için stiller */
+    .bom-item.material-used {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .bom-item.material-used:hover {
+        opacity: 0.7 !important;
+        transform: scale(1.02);
+    }
+    
+    .used-badge {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    
+    <div class="visual-workflow-container">
+        <!-- Sol Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-boxes"></i> Malzemeler & İş Adımları
+            </div>
+            
+            <!-- Ürün Seçici -->
+            <div class="product-selector">
+                <label for="product-select"><strong>Ürün Seçin:</strong></label>
+                <select id="product-select" class="form-control" style="margin-top: 8px;">
+                    <option value="">-- Ürün Seçin --</option>
+                    {% for urun in urunler %}
+                        <option value="{{ urun.id }}" data-recete-url="{% url 'admin:production_urun_change' urun.id %}">
+                            {{ urun.ad }} ({{ urun.get_kategori_display }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- BOM Malzemeleri -->
+            <div id="bom-section" class="bom-items" style="display: none;">
+                <div class="category-header">
+                    <i class="fas fa-list-ul"></i> BOM Malzemeleri
+                </div>
+                <div id="bom-container">
+                    <!-- BOM items will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Standard İş Adımları -->
+            <div class="standard-steps">
+                <div class="category-header">
+                    <i class="fas fa-cogs"></i> Standard İş Adımları
+                </div>
+                
+                {% regroup standard_is_adimlari by kategori as grouped_steps %}
+                {% for group in grouped_steps %}
+                    <div class="category-header" style="font-size: 12px; margin-top: 15px;">
+                        {{ group.grouper|upper }}
+                    </div>
+                    {% for step in group.list %}
+                        <div class="standard-step" 
+                             draggable="true" 
+                             data-step-id="{{ step.id }}"
+                             data-step-type="standard"
+                             data-step-name="{{ step.ad }}"
+                             data-step-code="{{ step.kod }}"
+                             data-step-time="{{ step.tahmini_sure_birim }}"
+                             data-step-color="{{ step.renk }}"
+                             style="border-left-color: {{ step.renk }};">
+                            <div class="step-title">
+                                {% if step.ikon %}<i class="{{ step.ikon }}"></i> {% endif %}
+                                {{ step.ad }}
+                            </div>
+                            <div class="step-details">
+                                {{ step.kod }} | {{ step.tahmini_sure_birim }}dk/adet
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-header">
+                <i class="fas fa-project-diagram"></i> İş Akışı Tasarım Canvas'ı
+                <div style="font-size: 14px; margin-top: 5px;">
+                    Sol taraftan adımları sürükleyip bırakın, bağlantıları çizin
+                </div>
+            </div>
+            
+            <div id="workflow-canvas" class="workflow-canvas">
+                <!-- SVG for connections -->
+                <svg id="connections-svg" class="connection-svg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff"/>
+                        </marker>
+                        <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#28a745"/>
+                        </marker>
+                    </defs>
+                </svg>
+                
+                <div id="canvas-placeholder" style="text-align: center; color: #6c757d; margin-top: 100px;">
+                    <i class="fas fa-arrow-left" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <h3>İş Akışınızı Tasarlamaya Başlayın</h3>
+                    <p>Sol taraftan ürün seçin ve iş adımlarını canvas'a sürükleyin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kontroller -->
+    <div class="controls">
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary" id="clear-canvas">
+                <i class="fas fa-trash"></i> Temizle
+            </button>
+            <button type="button" class="btn btn-primary" id="save-workflow">
+                <i class="fas fa-save"></i> İş Akışını Kaydet
+            </button>
+            <button type="button" class="btn btn-success" id="generate-work-order">
+                <i class="fas fa-play"></i> İş Emri Oluştur
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('workflow-canvas');
+    const placeholder = document.getElementById('canvas-placeholder');
+    const productSelect = document.getElementById('product-select');
+    const bomSection = document.getElementById('bom-section');
+    const bomContainer = document.getElementById('bom-container');
+    
+    let draggedElement = null;
+    let canvasSteps = [];
+    let connections = [];
+    let isConnecting = false;
+    let connectingFrom = null;
+    let stepMaterials = {}; // Operasyon ID -> malzeme listesi
+    let stepSubproducts = {}; // Operasyon ID -> ara ürün listesi
+    
+    // Drag and Drop Events
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.classList.contains('standard-step') || e.target.classList.contains('bom-item')) {
+            draggedElement = e.target;
+        }
+    });
+    
+    canvas.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    
+    canvas.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (draggedElement) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Malzeme kartını operasyon kartına drop etme kontrolü
+            const targetStep = e.target.closest('.step-card');
+            if (targetStep && draggedElement.classList.contains('bom-item') && targetStep.dataset.stepSourceType === 'standard') {
+                // Malzeme/ara ürünü operasyona ata
+                assignMaterialToOperation(draggedElement, targetStep);
+                draggedElement = null;
+                return;
+            }
+            
+            // Sadece sidebar'dan gelen elementler için yeni kart oluştur
+            if (draggedElement.classList.contains('standard-step') || draggedElement.classList.contains('bom-item')) {
+                createStepCard(draggedElement, x, y);
+                placeholder.style.display = 'none';
+            } else if (draggedElement.classList.contains('step-card')) {
+                // Canvas içindeki kartları taşı
+                draggedElement.style.left = Math.max(0, x - draggedElement.offsetWidth/2) + 'px';
+                draggedElement.style.top = Math.max(0, y - draggedElement.offsetHeight/2) + 'px';
+                updateConnections();
+            }
+            draggedElement = null;
+        }
+    });
+    
+    function createStepCard(sourceElement, x, y) {
+        const stepCard = document.createElement('div');
+        stepCard.className = 'step-card';
+        stepCard.style.left = x + 'px';
+        stepCard.style.top = y + 'px';
+        
+        const stepType = sourceElement.dataset.stepType || 'bom';
+        const stepName = sourceElement.dataset.stepName || sourceElement.textContent.trim();
+        const stepCode = sourceElement.dataset.stepCode || '';
+        const stepTime = sourceElement.dataset.stepTime || '';
+        const stepColor = sourceElement.dataset.stepColor || '#007bff';
+        
+        if (stepType === 'bom') {
+            stepCard.classList.add('bom-step');
+        }
+        
+        const stepId = 'step-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        stepCard.id = stepId;
+        
+        // Veri attributelerini sakla
+        stepCard.dataset.stepSourceType = stepType;
+        stepCard.dataset.stepName = stepName;
+        stepCard.dataset.stepCode = stepCode;
+        
+        // Standard iş adımı ise ID'sini sakla
+        if (stepType === 'standard') {
+            stepCard.dataset.standardId = sourceElement.dataset.stepId;
+        }
+        
+        let detailsContent = '';
+        if (stepType === 'bom') {
+            const miktar = sourceElement.dataset.stepMiktar || '';
+            const birim = sourceElement.dataset.stepBirim || '';
+            detailsContent = `<strong style="color: #007bff;">${miktar} ${birim}</strong> gerekli`;
+        } else {
+            detailsContent = `${stepCode} ${stepTime ? '| ' + stepTime + 'dk' : ''}`;
+        }
+        
+        stepCard.innerHTML = `
+            <div class="step-title" style="color: ${stepColor};">${stepName}</div>
+            <div class="step-details">
+                ${detailsContent}
+            </div>
+            <button class="connection-button" title="Bağlantı Çiz" onclick="startConnection('${stepId}')">
+                <i class="fas fa-link"></i>
+            </button>
+            <div style="position: absolute; top: 5px; right: 5px; cursor: pointer;" onclick="removeStep('${stepId}')">
+                <i class="fas fa-times" style="color: #dc3545;"></i>
+            </div>
+        `;
+        
+        // Make draggable
+        stepCard.draggable = true;
+        stepCard.addEventListener('dragstart', function(e) {
+            draggedElement = stepCard;
+        });
+        
+        // Click to select
+        stepCard.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log('Step clicked:', stepId, 'isConnecting:', isConnecting, 'connectingFrom:', connectingFrom);
+            
+            if (isConnecting && connectingFrom && connectingFrom !== stepId) {
+                console.log('Creating connection from', connectingFrom, 'to', stepId);
+                createConnection(connectingFrom, stepId);
+                stopConnecting();
+            } else if (!isConnecting) {
+                selectStep(stepId);
+            }
+        });
+        
+        // Drag-over events for drop zone feedback
+        if (stepType === 'standard') {
+            stepCard.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (draggedElement && draggedElement.classList.contains('bom-item')) {
+                    stepCard.style.borderColor = '#28a745';
+                    stepCard.style.boxShadow = '0 0 15px rgba(40, 167, 69, 0.5)';
+                }
+            });
+            
+            stepCard.addEventListener('dragleave', function(e) {
+                if (!stepCard.contains(e.relatedTarget)) {
+                    stepCard.style.borderColor = '';
+                    stepCard.style.boxShadow = '';
+                }
+            });
+        }
+        
+        canvas.appendChild(stepCard);
+        canvasSteps.push(stepCard);
+        
+        // Ara ürün ise alt malzemelerini de otomatik ekle
+        if (stepType === 'bom' && sourceElement.dataset.kategoriCode === 'ara_urun' && sourceElement.dataset.altMalzemeler) {
+            const altMalzemeler = JSON.parse(sourceElement.dataset.altMalzemeler);
+            let offsetY = 120; // Ana kartın altından başla
+            
+            altMalzemeler.forEach((altMalzeme, index) => {
+                setTimeout(() => {
+                    createSubMaterialCard(altMalzeme, x + 200, y + offsetY + (index * 100), stepId);
+                }, 300 + (index * 200)); // Sıralı animasyon
+            });
+        }
+    }
+    
+    function createSubMaterialCard(altMalzeme, x, y, parentId) {
+        const subCard = document.createElement('div');
+        subCard.className = 'step-card bom-step';
+        subCard.style.left = x + 'px';
+        subCard.style.top = y + 'px';
+        subCard.style.borderStyle = 'dashed'; // Alt malzeme için kesikli çerçeve
+        subCard.style.opacity = '0';
+        subCard.style.transform = 'scale(0.8)';
+        
+        const subStepId = 'substep-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        subCard.id = subStepId;
+        
+        const stokDurum = altMalzeme.stok >= altMalzeme.miktar ? 'success' : 'warning';
+        const stokColor = stokDurum === 'success' ? '#28a745' : '#ffc107';
+        
+        subCard.innerHTML = `
+            <div class="step-title" style="color: #dc3545; font-size: 13px;">
+                ${altMalzeme.ad}
+                <span style="background: #dc3545; color: white; padding: 1px 3px; border-radius: 2px; font-size: 9px; margin-left: 3px;">Alt</span>
+            </div>
+            <div class="step-details" style="font-size: 11px;">
+                <strong style="color: #dc3545;">${altMalzeme.miktar} ${altMalzeme.birim}</strong>
+                <br>Stok: ${altMalzeme.stok}
+                <span style="color: ${stokColor}; margin-left: 3px;">
+                    <i class="fas fa-${stokDurum === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                </span>
+            </div>
+            <button class="connection-button" title="Bağlantı Çiz" onclick="startConnection('${subStepId}')" style="width: 14px; height: 14px; font-size: 8px;">
+                <i class="fas fa-link"></i>
+            </button>
+            <div style="position: absolute; top: 3px; right: 3px; cursor: pointer;" onclick="removeStep('${subStepId}')">
+                <i class="fas fa-times" style="color: #dc3545; font-size: 12px;"></i>
+            </div>
+        `;
+        
+        // Make draggable
+        subCard.draggable = true;
+        subCard.addEventListener('dragstart', function(e) {
+            draggedElement = subCard;
+        });
+        
+        // Click to select
+        subCard.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log('Sub step clicked:', subStepId, 'isConnecting:', isConnecting, 'connectingFrom:', connectingFrom);
+            
+            if (isConnecting && connectingFrom && connectingFrom !== subStepId) {
+                console.log('Creating connection from', connectingFrom, 'to', subStepId);
+                createConnection(connectingFrom, subStepId);
+                stopConnecting();
+            } else if (!isConnecting) {
+                selectStep(subStepId);
+            }
+        });
+        
+        canvas.appendChild(subCard);
+        canvasSteps.push(subCard);
+        
+        // Ana malzeme ile bağlantı oluştur
+        setTimeout(() => {
+            createConnection(parentId, subStepId);
+        }, 500);
+        
+        // Animasyon
+        setTimeout(() => {
+            subCard.style.transition = 'all 0.3s ease';
+            subCard.style.opacity = '1';
+            subCard.style.transform = 'scale(1)';
+        }, 100);
+    }
+    
+    // Malzeme-operasyon atama fonksiyonu
+    function assignMaterialToOperation(materialElement, operationStep) {
+        const operationId = operationStep.dataset.standardId;
+        const materialId = materialElement.dataset.stepId;
+        const materialName = materialElement.dataset.stepName;
+        const materialMiktar = materialElement.dataset.stepMiktar;
+        const materialBirim = materialElement.dataset.stepBirim;
+        const materialCategory = materialElement.dataset.kategoriCode;
+        
+        // Debug mesajları kaldırıldı - sistem artık çalışıyor
+        
+        if (!operationId) {
+            console.warn('UYARI: Operasyon ID bulunamadı:', operationStep);
+            return;
+        }
+        
+        const materialData = {
+            id: materialId,
+            ad: materialName,
+            miktar: materialMiktar,
+            birim: materialBirim,
+            kategori: materialCategory
+        };
+        
+        // Operasyon için malzeme listesini başlat
+        if (!stepMaterials[operationId]) {
+            stepMaterials[operationId] = [];
+        }
+        if (!stepSubproducts[operationId]) {
+            stepSubproducts[operationId] = [];
+        }
+        
+        // Kategori kontrolü - ara ürün vs malzeme
+        if (materialCategory === 'ara_urun') {
+            // Ara ürün - zaten var mı kontrol et
+            const exists = stepSubproducts[operationId].find(item => item.id === materialId);
+            if (!exists) {
+                stepSubproducts[operationId].push(materialData);
+                console.log(`Ara urun "${materialName}" operasyona "${operationStep.dataset.stepName}" eklendi`);
+                
+                // Sol paneldeki malzemeyi kullanıldı olarak işaretle
+                markMaterialAsUsed(materialElement);
+                
+                // Görsel feedback
+                showAssignmentFeedback(operationStep, materialName, 'ara urun');
+            }
+        } else {
+            // Normal malzeme - zaten var mı kontrol et
+            const exists = stepMaterials[operationId].find(item => item.id === materialId);
+            if (!exists) {
+                stepMaterials[operationId].push(materialData);
+                console.log(`Malzeme "${materialName}" operasyona "${operationStep.dataset.stepName}" eklendi`);
+                
+                // Sol paneldeki malzemeyi kullanıldı olarak işaretle
+                markMaterialAsUsed(materialElement);
+                
+                // Görsel feedback
+                showAssignmentFeedback(operationStep, materialName, 'malzeme');
+            }
+        }
+        
+        console.log('Güncel malzeme atamaları:', stepMaterials);
+        console.log('Güncel ara ürün atamaları:', stepSubproducts);
+    }
+    
+    // Sol paneldeki malzemeyi kullanıldı olarak işaretle
+    function markMaterialAsUsed(materialElement) {
+        // Eğer zaten işaretliyse bir şey yapma
+        if (materialElement.classList.contains('material-used')) {
+            return;
+        }
+        
+        // "Kullanıldı" sınıfını ekle
+        materialElement.classList.add('material-used');
+        
+        // Görsel değişiklikleri uygula
+        materialElement.style.opacity = '0.5';
+        materialElement.style.filter = 'grayscale(50%)';
+        materialElement.style.border = '2px solid #28a745';
+        materialElement.style.position = 'relative';
+        
+        // "Kullanıldı" badge'i ekle
+        if (!materialElement.querySelector('.used-badge')) {
+            const usedBadge = document.createElement('div');
+            usedBadge.className = 'used-badge';
+            usedBadge.style.cssText = `
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #28a745;
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: bold;
+                z-index: 10;
+            `;
+            usedBadge.textContent = '✓';
+            materialElement.appendChild(usedBadge);
+        }
+        
+        // Tooltip ekle
+        materialElement.title = 'Bu malzeme bir operasyona atanmıştır';
+        
+        // Animasyon efekti
+        materialElement.style.transition = 'all 0.3s ease';
+    }
+    
+    // Malzemenin kullanım durumunu sıfırla (temizleme için)
+    function resetMaterialUsage(materialElement) {
+        materialElement.classList.remove('material-used');
+        materialElement.style.opacity = '';
+        materialElement.style.filter = '';
+        materialElement.style.border = '';
+        materialElement.title = '';
+        
+        // Badge'i kaldır
+        const usedBadge = materialElement.querySelector('.used-badge');
+        if (usedBadge) {
+            usedBadge.remove();
+        }
+    }
+    
+    // Atama işlemi için görsel feedback
+    function showAssignmentFeedback(operationStep, materialName, type) {
+        // Operasyon kartına geçici bir badge ekle
+        const badge = document.createElement('div');
+        badge.style.cssText = `
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            z-index: 1000;
+            animation: fadeInOut 2s ease-in-out;
+        `;
+        badge.textContent = `+ ${type}`;
+        operationStep.appendChild(badge);
+        
+        // CSS animasyonu
+        if (!document.getElementById('assignment-animation-css')) {
+            const style = document.createElement('style');
+            style.id = 'assignment-animation-css';
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: scale(0.5); }
+                    50% { opacity: 1; transform: scale(1.1); }
+                    100% { opacity: 0; transform: scale(0.8); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Badge'i 2 saniye sonra kaldır
+        setTimeout(() => {
+            if (badge.parentNode) {
+                badge.parentNode.removeChild(badge);
+            }
+        }, 2000);
+        
+        // Operasyon kartına kısa süre için yeşil border ekle
+        const originalBorder = operationStep.style.borderColor;
+        operationStep.style.borderColor = '#28a745';
+        operationStep.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.5)';
+        
+        setTimeout(() => {
+            operationStep.style.borderColor = originalBorder;
+            operationStep.style.boxShadow = '';
+        }, 1000);
+    }
+    
+    // Product selection
+    productSelect.addEventListener('change', function() {
+        // Önceki malzeme işaretlemelerini temizle
+        document.querySelectorAll('.bom-item.material-used').forEach(materialElement => {
+            resetMaterialUsage(materialElement);
+        });
+        
+        // Malzeme atamalarını sıfırla
+        stepMaterials = {};
+        stepSubproducts = {};
+        
+        if (this.value) {
+            loadBOMForProduct(this.value);
+            bomSection.style.display = 'block';
+        } else {
+            bomSection.style.display = 'none';
+        }
+    });
+    
+    function loadBOMForProduct(productId) {
+        bomContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #6c757d;"><i class="fas fa-spinner fa-spin"></i> BOM yükleniyor...</div>';
+        
+        fetch(`/admin/production/isakisi/ajax/get-bom/${productId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bomContainer.innerHTML = '';
+                    
+                    if (data.bom_items.length === 0) {
+                        bomContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #6c757d;"><i class="fas fa-info-circle"></i> Bu ürünün BOM tanımı yok</div>';
+                        return;
+                    }
+                    
+                    data.bom_items.forEach(item => {
+                        const bomItem = document.createElement('div');
+                        bomItem.className = 'bom-item';
+                        bomItem.draggable = true;
+                        bomItem.dataset.stepType = 'bom';
+                        bomItem.dataset.stepName = item.ad;
+                        bomItem.dataset.stepId = item.id;
+                        bomItem.dataset.stepMiktar = item.miktar;
+                        bomItem.dataset.stepBirim = item.birim;
+                        bomItem.dataset.kategoriCode = item.kategori_code;
+                        
+                        // Alt malzemeler varsa JSON olarak sakla
+                        if (item.alt_malzemeler && item.alt_malzemeler.length > 0) {
+                            bomItem.dataset.altMalzemeler = JSON.stringify(item.alt_malzemeler);
+                        }
+                        
+                        // Stok durumu için renk belirleme
+                        const stokDurum = item.stok >= item.miktar ? 'success' : 'warning';
+                        const stokColor = stokDurum === 'success' ? '#28a745' : '#ffc107';
+                        
+                        // Ara ürün için özel stil
+                        const araUrunBadge = item.kategori_code === 'ara_urun' ? 
+                            '<span style="background: #6610f2; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-left: 5px;">Ara Ürün</span>' : '';
+                        
+                        bomItem.innerHTML = `
+                            <div class="step-title">${item.ad} ${araUrunBadge}</div>
+                            <div class="step-details">
+                                <strong style="color: #007bff;">${item.miktar} ${item.birim}</strong> gerekli
+                                <br>Stok: ${item.stok} ${item.birim}
+                                <span style="color: ${stokColor}; margin-left: 5px;">
+                                    <i class="fas fa-${stokDurum === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                                </span>
+                                ${item.alt_malzemeler && item.alt_malzemeler.length > 0 ? 
+                                    `<br><small style="color: #6610f2;"><i class="fas fa-sitemap"></i> ${item.alt_malzemeler.length} alt malzeme</small>` : ''}
+                            </div>
+                        `;
+                        
+                        bomContainer.appendChild(bomItem);
+                    });
+                } else {
+                    bomContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Hata: ${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('BOM yükleme hatası:', error);
+                bomContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> BOM yüklenirken hata oluştu</div>';
+            });
+    }
+    
+    // Connection functions
+    window.startConnection = function(stepId) {
+        console.log('Starting connection from:', stepId);
+        
+        if (isConnecting) {
+            console.log('Already connecting, stopping previous connection');
+            stopConnecting();
+            return;
+        }
+        
+        isConnecting = true;
+        connectingFrom = stepId;
+        const step = document.getElementById(stepId);
+        if (step) {
+            step.classList.add('connecting');
+        }
+        console.log('Connection mode activated. isConnecting:', isConnecting, 'connectingFrom:', connectingFrom);
+        
+        // Show instructions
+        const instructions = document.createElement('div');
+        instructions.id = 'connection-instructions';
+        instructions.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ffc107;
+            color: #212529;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        instructions.innerHTML = `
+            <strong>Bağlantı Modu Aktif</strong><br>
+            <small>Hedef adımı tıklayın veya ESC ile iptal edin</small>
+        `;
+        document.body.appendChild(instructions);
+        
+        // ESC to cancel
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+                stopConnecting();
+                document.removeEventListener('keydown', escHandler);
+            }
+        });
+    }
+    
+    function stopConnecting() {
+        isConnecting = false;
+        if (connectingFrom) {
+            const step = document.getElementById(connectingFrom);
+            if (step) step.classList.remove('connecting');
+        }
+        connectingFrom = null;
+        
+        const instructions = document.getElementById('connection-instructions');
+        if (instructions) instructions.remove();
+    }
+    
+    function createConnection(fromId, toId) {
+        if (fromId === toId) return;
+        
+        // Check if connection already exists
+        const exists = connections.some(conn => conn.from === fromId && conn.to === toId);
+        if (exists) return;
+        
+        connections.push({ from: fromId, to: toId });
+        drawConnection(fromId, toId);
+    }
+    
+    function drawConnection(fromId, toId) {
+        const fromEl = document.getElementById(fromId);
+        const toEl = document.getElementById(toId);
+        
+        if (!fromEl || !toEl) return;
+        
+        const svg = document.getElementById('connections-svg');
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        // Get element positions relative to canvas
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+        
+        const fromCenterX = fromRect.left - canvasRect.left + fromRect.width / 2;
+        const fromCenterY = fromRect.top - canvasRect.top + fromRect.height / 2;
+        const toCenterX = toRect.left - canvasRect.left + toRect.width / 2;
+        const toCenterY = toRect.top - canvasRect.top + toRect.height / 2;
+        
+        // Calculate connection points on card edges
+        const fromEdge = getCardEdgePoint(fromCenterX, fromCenterY, fromRect.width / 2, fromRect.height / 2, toCenterX, toCenterY);
+        const toEdge = getCardEdgePoint(toCenterX, toCenterY, toRect.width / 2, toRect.height / 2, fromCenterX, fromCenterY);
+        
+        // Create SVG path
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.id = `connection-${fromId}-${toId}`;
+        path.classList.add('connection-arrow');
+        
+        // Create curved path
+        const controlX = (fromEdge.x + toEdge.x) / 2;
+        const controlY = Math.min(fromEdge.y, toEdge.y) - 20; // Curve upward
+        
+        const pathData = `M ${fromEdge.x} ${fromEdge.y} Q ${controlX} ${controlY} ${toEdge.x} ${toEdge.y}`;
+        path.setAttribute('d', pathData);
+        
+        svg.appendChild(path);
+    }
+    
+    function getCardEdgePoint(centerX, centerY, halfWidth, halfHeight, targetX, targetY) {
+        // Calculate direction from center to target
+        const dx = targetX - centerX;
+        const dy = targetY - centerY;
+        
+        // Calculate intersection with card rectangle
+        const slope = dy / dx;
+        
+        let edgeX, edgeY;
+        
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Intersect with left or right edge
+            edgeX = centerX + (dx > 0 ? halfWidth : -halfWidth);
+            edgeY = centerY + slope * (dx > 0 ? halfWidth : -halfWidth);
+        } else {
+            // Intersect with top or bottom edge
+            edgeY = centerY + (dy > 0 ? halfHeight : -halfHeight);
+            edgeX = centerX + (dy > 0 ? halfHeight : -halfHeight) / slope;
+        }
+        
+        return { x: edgeX, y: edgeY };
+    }
+    
+    function updateConnections() {
+        const svg = document.getElementById('connections-svg');
+        connections.forEach(conn => {
+            const pathEl = document.getElementById(`connection-${conn.from}-${conn.to}`);
+            if (pathEl) pathEl.remove();
+            drawConnection(conn.from, conn.to);
+        });
+    }
+    
+    function selectStep(stepId) {
+        // Clear previous selections
+        canvasSteps.forEach(step => step.classList.remove('selected'));
+        
+        const step = document.getElementById(stepId);
+        if (step) step.classList.add('selected');
+    }
+    
+    window.removeStep = function(stepId) {
+        const step = document.getElementById(stepId);
+        if (step) {
+            // Remove connections
+            connections = connections.filter(conn => {
+                if (conn.from === stepId || conn.to === stepId) {
+                    const pathEl = document.getElementById(`connection-${conn.from}-${conn.to}`);
+                    if (pathEl) pathEl.remove();
+                    return false;
+                }
+                return true;
+            });
+            
+            // Remove step
+            step.remove();
+            canvasSteps = canvasSteps.filter(s => s.id !== stepId);
+        }
+    }
+    
+    // Canvas click to deselect
+    canvas.addEventListener('click', function(e) {
+        if (e.target === canvas) {
+            canvasSteps.forEach(step => step.classList.remove('selected'));
+        }
+    });
+    
+    // Control buttons
+    document.getElementById('clear-canvas').addEventListener('click', function() {
+        // Clear all steps
+        canvasSteps.forEach(step => step.remove());
+        
+        // Clear all connections
+        const svg = document.getElementById('connections-svg');
+        const paths = svg.querySelectorAll('.connection-arrow');
+        paths.forEach(path => path.remove());
+        
+        // Reset malzeme kullanım durumları
+        document.querySelectorAll('.bom-item.material-used').forEach(materialElement => {
+            resetMaterialUsage(materialElement);
+        });
+        
+        // Reset arrays
+        canvasSteps = [];
+        connections = [];
+        stepMaterials = {};
+        stepSubproducts = {};
+        stopConnecting();
+        
+        // Show placeholder
+        document.getElementById('canvas-placeholder').style.display = 'block';
+    });
+    
+    document.getElementById('save-workflow').addEventListener('click', function() {
+        if (canvasSteps.length === 0) {
+            alert('Lütfen önce iş akışı adımlarını canvas\'a ekleyin!');
+            return;
+        }
+        
+        const selectedProduct = productSelect.value;
+        if (!selectedProduct) {
+            alert('Lütfen önce bir ürün seçin!');
+            return;
+        }
+        
+        // Sadece standard iş adımlarını kaydet (BOM malzemeleri kaydetmeye
+        const standardSteps = canvasSteps.filter(step => 
+            step.dataset.stepSourceType === 'standard'
+        );
+        
+        if (standardSteps.length === 0) {
+            alert('Lütfen en az bir iş adımı ekleyin! (BOM malzemeler iş akışında kaydedilmez)');
+            return;
+        }
+        
+        // İş akışı adını sor
+        const workflowName = prompt('İş akışı adını girin:', `${productSelect.selectedOptions[0].text} - İş Akışı`);
+        if (!workflowName) {
+            return;
+        }
+        
+        // Veriyi hazırla
+        const workflowData = {
+            workflow: {
+                urun_id: selectedProduct,
+                name: workflowName,
+                code: `WF-${new Date().toISOString().slice(0,19).replace(/[:-]/g, '').replace('T', '-')}`
+            },
+            steps: [],
+            connections: []
+        };
+        
+        // Standard adımları ekle
+        standardSteps.forEach(step => {
+            const standardId = step.dataset.standardId;
+            const stepData = {
+                id: step.id,
+                type: 'standard',
+                standard_id: standardId,
+                name: step.dataset.stepName,
+                x: parseInt(step.style.left),
+                y: parseInt(step.style.top),
+                materials: stepMaterials[standardId] || [],
+                subproducts: stepSubproducts[standardId] || []
+            };
+            workflowData.steps.push(stepData);
+        });
+        
+        // Sadece standard adımlar arasındaki bağlantıları ekle
+        const standardStepIds = new Set(standardSteps.map(s => s.id));
+        connections.forEach(conn => {
+            if (standardStepIds.has(conn.from) && standardStepIds.has(conn.to)) {
+                workflowData.connections.push(conn);
+            }
+        });
+        
+        // Kaydet butonu durumunu değiştir
+        const saveBtn = this;
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
+        saveBtn.disabled = true;
+        
+        // Debug: Kaydedilen malzeme atamalarını göster
+        const toplam_malzeme = Object.values(stepMaterials).reduce((sum, arr) => sum + arr.length, 0);
+        const toplam_ara_urun = Object.values(stepSubproducts).reduce((sum, arr) => sum + arr.length, 0);
+        
+        if (toplam_malzeme > 0 || toplam_ara_urun > 0) {
+            console.log(`İş akışı kaydediliyor: ${toplam_malzeme} malzeme, ${toplam_ara_urun} ara ürün ataması`);
+        }
+        
+        // AJAX ile kaydet
+        fetch('/admin/production/isakisi/ajax/save-workflow/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify(workflowData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.message}\n\nİş Akışı ID: ${data.workflow_id}\nKod: ${data.workflow_code}`);
+                
+                // İsteğe bağlı: İş akışları listesine yönlendir
+                if (confirm('İş akışları listesini görüntülemek ister misiniz?')) {
+                    window.location.href = '/admin/production/isakisi/';
+                }
+            } else {
+                alert(`❌ Hata: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error('Kaydetme hatası:', error);
+            alert('❌ Kaydetme sırasında bir hata oluştu. Konsolu kontrol edin.');
+        })
+        .finally(() => {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        });
+    });
+    
+    document.getElementById('generate-work-order').addEventListener('click', function() {
+        if (canvasSteps.length === 0) {
+            alert('Lütfen önce iş akışını tasarlayın!');
+            return;
+        }
+        alert('İş Emri oluşturuldu! (Bu özellik yakında implement edilecek)');
+    });
+});
+</script>
+{% endblock %}

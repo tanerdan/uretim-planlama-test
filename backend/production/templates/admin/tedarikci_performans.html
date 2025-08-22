@@ -1,0 +1,131 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Ana Sayfa</a>
+    &rsaquo; <a href="{% url 'admin:production_malzemegelis_changelist' %}">Malzeme Gelişleri</a>
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<!-- Tarih Filtresi -->
+<div class="filter-container" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <form method="get" style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
+        <div>
+            <label for="baslangic" style="display: block; margin-bottom: 5px; font-weight: bold;">Başlangıç Tarihi:</label>
+            <input type="date" id="baslangic" name="baslangic" value="{{ baslangic_tarihi }}" 
+                   style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div>
+            <label for="bitis" style="display: block; margin-bottom: 5px; font-weight: bold;">Bitiş Tarihi:</label>
+            <input type="date" id="bitis" name="bitis" value="{{ bitis_tarihi }}" 
+                   style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <button type="submit" style="background: #007cba; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+            📊 Raporu Güncelle
+        </button>
+        <a href="{% url 'admin:production_malzemegelis_changelist' %}" 
+           style="background: #6c757d; color: white; text-decoration: none; padding: 10px 15px; border-radius: 4px;">
+            ← Geri Dön
+        </a>
+    </form>
+</div>
+
+<!-- Performans Tablosu -->
+<div class="results">
+    <table style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <thead style="background: #f1f1f1;">
+            <tr>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">🏢 Tedarikçi</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">📦 Toplam Geliş</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">💰 Toplam Tutar</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">💸 Ortalama Tutar</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">📋 Sipariş Sayısı</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">🧱 Malzeme Türü</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">⏰ Zamanında Teslimat</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">📈 Performans</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for perf in tedarikci_performans %}
+            <tr style="{% cycle 'background: #f9f9f9;' '' %}">
+                <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">
+                    {{ perf.satinalma_siparisi__tedarikci__ad }}
+                    {% if perf.satinalma_siparisi__tedarikci__kod %}
+                        <br><small style="color: #6c757d;">({{ perf.satinalma_siparisi__tedarikci__kod }})</small>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">
+                    <strong>{{ perf.toplam_gelis }}</strong>
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right; color: #28a745; font-weight: bold;">
+                    {{ perf.toplam_tutar|floatformat:2 }} ₺
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">
+                    {{ perf.ortalama_tutar|floatformat:2 }} ₺
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">
+                    {{ perf.toplam_siparis_sayisi }}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">
+                    {{ perf.benzersiz_malzeme }}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">
+                    <span style="{% if perf.zamaninda_teslimat >= 90 %}color: #28a745;{% elif perf.zamaninda_teslimat >= 70 %}color: #ffc107;{% else %}color: #dc3545;{% endif %} font-weight: bold;">
+                        %{{ perf.zamaninda_teslimat|floatformat:1 }}
+                    </span>
+                    <br><small style="color: #6c757d;">{{ perf.zamaninda_siparis }}/{{ perf.toplam_siparis_sayisi }}</small>
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">
+                    {% if perf.zamaninda_teslimat >= 90 %}
+                        <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">🌟 Mükemmel</span>
+                    {% elif perf.zamaninda_teslimat >= 80 %}
+                        <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">✅ İyi</span>
+                    {% elif perf.zamaninda_teslimat >= 60 %}
+                        <span style="background: #ffc107; color: black; padding: 4px 8px; border-radius: 12px; font-size: 11px;">⚠️ Orta</span>
+                    {% else %}
+                        <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">🔴 Zayıf</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">
+                    Seçilen tarih aralığında veri bulunamadı.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Performans Açıklamaları -->
+<div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+    <h3 style="margin: 0 0 10px 0;">📊 Performans Kriterleri</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+        <div>
+            <span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px;">🌟 Mükemmel</span>
+            <span style="margin-left: 8px; font-size: 13px;">≥90% zamanında teslimat</span>
+        </div>
+        <div>
+            <span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px;">✅ İyi</span>
+            <span style="margin-left: 8px; font-size: 13px;">≥80% zamanında teslimat</span>
+        </div>
+        <div>
+            <span style="background: #ffc107; color: black; padding: 2px 6px; border-radius: 8px; font-size: 11px;">⚠️ Orta</span>
+            <span style="margin-left: 8px; font-size: 13px;">≥60% zamanında teslimat</span>
+        </div>
+        <div>
+            <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px;">🔴 Zayıf</span>
+            <span style="margin-left: 8px; font-size: 13px;">&lt;60% zamanında teslimat</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

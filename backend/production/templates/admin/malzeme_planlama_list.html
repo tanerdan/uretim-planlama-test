@@ -1,0 +1,160 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Malzeme Planlama{% endblock %}
+
+{% block content %}
+
+<div id="changelist" class="module">
+    <form method="post" id="planlama-form">
+        {% csrf_token %}
+        <div class="results">
+            <table id="result_list">
+                <thead>
+                    <tr>
+                        <th scope="col" class="action-checkbox-column">
+                            <input type="checkbox" id="action-toggle">
+                        </th>
+                        <th scope="col">Sipariş No</th>
+                        <th scope="col">Müşteri</th>
+                        <th scope="col">Tarih</th>
+                        <th scope="col">Teslim Tarihi</th>
+                        <th scope="col">Ürünler</th>
+                        <th scope="col">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for siparis in bekleyen_siparisler %}
+                    <tr class="{% cycle 'row1' 'row2' %}">
+                        <td class="action-checkbox">
+                            <input type="checkbox" name="selected_siparisler" value="{{ siparis.id }}" class="action-select">
+                        </td>
+                        <td>{{ siparis.siparis_no }}</td>
+                        <td>{{ siparis.musteri.ad }}</td>
+                        <td>{{ siparis.tarih|date:"d.m.Y" }}</td>
+                        <td>{{ siparis.teslim_tarihi|date:"d.m.Y" }}</td>
+                        <td>
+                            {% for kalem in siparis.kalemler.all %}
+                                <div>• {{ kalem.urun.ad }} ({{ kalem.miktar }} {{ kalem.urun.birim }})</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin:production_siparis_change' siparis.pk %}" class="button">Detay</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 20px;">
+                            Bekleyen sipariş bulunmamaktadır.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if bekleyen_siparisler %}
+        <div class="submit-row" style="padding: 20px; background: #f8f8f8; border-top: 1px solid #ddd;">
+            <button type="submit" name="action" value="malzeme_planla" class="button default" style="background-color: #5cb85c; padding: 10px 20px; font-size: 14px;">
+                Malzemeleri Planla
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<script>
+    // Tümünü seç checkbox'ı
+    document.getElementById('action-toggle').addEventListener('change', function() {
+        var checkboxes = document.querySelectorAll('.action-select');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = this.checked;
+        }
+    });
+    
+    // Form submit kontrolü
+    document.getElementById('planlama-form').addEventListener('submit', function(e) {
+        var checked = document.querySelectorAll('.action-select:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            alert('Lütfen en az bir sipariş seçin!');
+        }
+    });
+</script>
+
+<style>
+    #changelist {
+        flex: 1 0 auto;
+        width: 100%;
+    }
+    
+    #changelist .results {
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    #result_list {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    #result_list th {
+        text-align: left;
+        padding: 10px;
+        background: var(--header-bg);
+        color: var(--header-color);
+        font-weight: bold;
+        border-bottom: 2px solid var(--hairline-color);
+    }
+    
+    #result_list td {
+        padding: 10px;
+        border-bottom: 1px solid var(--hairline-color);
+        vertical-align: top;
+    }
+    
+    #result_list tr:hover {
+        background-color: var(--selected-row);
+    }
+    
+    .button {
+        background-color: var(--button-bg);
+        color: var(--button-fg);
+        padding: 5px 10px;
+        text-decoration: none;
+        border-radius: 4px;
+        display: inline-block;
+        border: 1px solid var(--button-bg);
+    }
+    
+    .button:hover {
+        background-color: var(--button-hover-bg);
+        color: var(--button-fg);
+    }
+    
+    .row1 {
+        background: var(--body-bg);
+    }
+    
+    .row2 {
+        background: var(--darkened-bg);
+    }
+    
+    .action-checkbox-column {
+        width: 40px;
+        text-align: center;
+    }
+    
+    .action-checkbox {
+        text-align: center;
+    }
+    
+    .action-select {
+        cursor: pointer;
+    }
+    
+    #action-toggle {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
