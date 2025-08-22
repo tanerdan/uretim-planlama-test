@@ -1,0 +1,1299 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .gantt-container {
+        margin: 20px;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    
+    .gantt-grid {
+        display: grid;
+        grid-template-columns: 200px repeat(30, 120px); /* İstasyon adı + 30 gün */
+        border: 1px solid #ddd;
+        font-size: 13px;
+        width: fit-content;
+    }
+    
+    /* Header row */
+    .gantt-header {
+        background: linear-gradient(135deg, #2c3e50, #34495e);
+        color: white;
+        padding: 12px;
+        border-bottom: 2px solid #007cba;
+        font-weight: bold;
+        font-size: 13px;
+        text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .gantt-header.station-header {
+        text-align: left;
+        background: linear-gradient(135deg, #34495e, #2c3e50);
+        font-size: 14px;
+        position: sticky;
+        left: 0;
+        z-index: 20;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    
+    /* Station name cells */
+    .gantt-station {
+        background: linear-gradient(135deg, #ecf0f1, #d5dbdb);
+        color: #2c3e50;
+        padding: 15px 12px;
+        border-right: 2px solid #007cba;
+        font-weight: bold;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        min-height: 80px;
+        position: sticky;
+        left: 0;
+        z-index: 15;
+        text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    
+    /* Day cells */
+    .gantt-cell {
+        border: 1px solid #ddd;
+        padding: 4px;
+        min-height: 80px;
+        position: relative;
+        background: white;
+        transition: background-color 0.2s;
+    }
+    
+    .gantt-cell:hover {
+        background-color: #f0f8ff;
+    }
+    
+    /* Today column */
+    .gantt-cell.today {
+        background-color: #fff3cd;
+    }
+    
+    .gantt-cell.today:hover {
+        background-color: #ffeaa7;
+    }
+    
+    /* Weekend columns */
+    .gantt-cell.weekend {
+        background-color: #f8f9fa;
+    }
+    
+    .gantt-cell.weekend:hover {
+        background-color: #e9ecef;
+    }
+    
+    /* Work order chips in gantt cells */
+    .gantt-work-order {
+        background: linear-gradient(135deg, #007cba, #0056b3);
+        color: white;
+        padding: 4px 6px;
+        margin-bottom: 2px;
+        border-radius: 4px;
+        cursor: move;
+        font-size: 11px;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        line-height: 1.2;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        user-select: none;
+        -webkit-user-drag: element;
+        position: relative;
+        z-index: 20;
+        pointer-events: all;
+        overflow: hidden;
+        min-height: 20px;
+    }
+    
+    /* Küçük iş emirleri için özel stil */
+    .gantt-work-order.compact {
+        padding: 2px 4px;
+        font-size: 10px;
+        line-height: 1.1;
+    }
+    
+    .gantt-work-order.compact br {
+        display: none; /* Küçük emirlerde satır atlama yok */
+    }
+    
+    .gantt-work-order.compact small {
+        display: none; /* Küçük emirlerde detayları gizle */
+    }
+    
+    .gantt-work-order:hover {
+        transform: scale(1.02);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    }
+    
+    /* Different colors for operation types - improved contrast */
+    .gantt-work-order.op-sargi {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+    
+    .gantt-work-order.op-montaj {
+        background: linear-gradient(135deg, #27ae60, #1e8449);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+    
+    .gantt-work-order.op-kurutma {
+        background: linear-gradient(135deg, #f39c12, #d68910);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+    
+    .gantt-work-order.op-test {
+        background: linear-gradient(135deg, #8e44ad, #7d3c98);
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+    
+    /* Drop zones */
+    .gantt-dropzone {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: all; /* Drop için hep aktif */
+        z-index: 1;
+    }
+    
+    .gantt-dropzone.drag-over {
+        opacity: 0.3;
+        background: #007cba;
+        border: 2px dashed #0056b3;
+    }
+    
+    .gantt-dropzone.drag-error {
+        opacity: 0.3;
+        background: #dc3545;
+        border: 2px dashed #c82333;
+    }
+    
+    .unplan-dropzone.drag-over {
+        transform: scale(1.02);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.5);
+        background: rgba(220, 53, 69, 0.1) !important;
+    }
+    
+    .unplan-dropzone.drag-over > div {
+        background: #dc3545 !important;
+        color: white !important;
+        border-color: white !important;
+        animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    /* Unplanned orders sidebar */
+    .unplanned-sidebar {
+        width: 300px;
+        background: #f8f9fa;
+        border-left: 2px solid #ddd;
+        padding: 15px;
+        position: fixed;
+        right: 0;
+        top: 100px;
+        bottom: 0;
+        overflow-y: auto;
+        z-index: 20;
+    }
+    
+    .unplanned-header {
+        font-weight: bold;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #007cba;
+        color: #2c3e50;
+        font-size: 16px;
+    }
+    
+    .unplanned-order {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 8px;
+        cursor: move;
+        transition: all 0.2s;
+        border-left: 4px solid #007cba;
+    }
+    
+    .unplanned-order:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left-color: #0056b3;
+    }
+    
+    /* Operation type borders for unplanned orders */
+    .unplanned-order.op-sargi {
+        border-left-color: #e74c3c;
+    }
+    
+    .unplanned-order.op-montaj {
+        border-left-color: #27ae60;
+    }
+    
+    .unplanned-order.op-kurutma {
+        border-left-color: #f39c12;
+    }
+    
+    .unplanned-order.op-test {
+        border-left-color: #8e44ad;
+    }
+    
+    .unplanned-order-header {
+        font-weight: bold;
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: #2c3e50;
+    }
+    
+    .unplanned-order-details {
+        font-size: 12px;
+        color: #5a6c7d;
+        line-height: 1.4;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1400px) {
+        .unplanned-sidebar {
+            position: relative;
+            width: 100%;
+            margin-top: 20px;
+        }
+    }
+    
+    /* Today indicator */
+    .today-indicator {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        background: #dc3545;
+        z-index: 1;
+        opacity: 0.7;
+    }
+    
+    /* Status indicators */
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+    }
+    
+    .status-hazir { background: #28a745; }
+    .status-yaklasyor { background: #ffc107; }
+    .status-bekliyor { background: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gantt-container">
+    <div class="gantt-grid" id="gantt-grid">
+        <!-- Header Row -->
+        <div class="gantt-header station-header">İş İstasyonları</div>
+        {% for gun in gunler %}
+        <div class="gantt-header {% if gun.is_today %}today{% endif %} {% if gun.is_weekend %}weekend{% endif %}">
+            <div>{{ gun.gun_adi }}</div>
+            <div style="font-size: 10px; font-weight: normal;">{{ gun.tarih|date:"d.m" }}</div>
+            <div style="font-size: 10px; font-weight: normal; margin-top: 2px;">
+                <select onchange="updateWorkingHours('{{ gun.tarih|date:'Y-m-d' }}', this.value)" 
+                        style="width: 55px; font-size: 10px; background: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.5); color: #2c3e50; border-radius: 3px;">
+                    <option value="0" {% if gun.default_calisma_saati == 0 %}selected{% endif %} style="color: #2c3e50; background: white;">0h</option>
+                    <option value="1" {% if gun.default_calisma_saati == 1 %}selected{% endif %} style="color: #2c3e50; background: white;">1h</option>
+                    <option value="2" {% if gun.default_calisma_saati == 2 %}selected{% endif %} style="color: #2c3e50; background: white;">2h</option>
+                    <option value="3" {% if gun.default_calisma_saati == 3 %}selected{% endif %} style="color: #2c3e50; background: white;">3h</option>
+                    <option value="4" {% if gun.default_calisma_saati == 4 %}selected{% endif %} style="color: #2c3e50; background: white;">4h</option>
+                    <option value="5" {% if gun.default_calisma_saati == 5 %}selected{% endif %} style="color: #2c3e50; background: white;">5h</option>
+                    <option value="6" {% if gun.default_calisma_saati == 6 %}selected{% endif %} style="color: #2c3e50; background: white;">6h</option>
+                    <option value="7" {% if gun.default_calisma_saati == 7 %}selected{% endif %} style="color: #2c3e50; background: white;">7h</option>
+                    <option value="8" {% if gun.default_calisma_saati == 8 %}selected{% endif %} style="color: #2c3e50; background: white;">8h</option>
+                    <option value="9" {% if gun.default_calisma_saati == 9 %}selected{% endif %} style="color: #2c3e50; background: white;">9h</option>
+                    <option value="10" {% if gun.default_calisma_saati == 10 %}selected{% endif %} style="color: #2c3e50; background: white;">10h</option>
+                    <option value="11" {% if gun.default_calisma_saati == 11 %}selected{% endif %} style="color: #2c3e50; background: white;">11h</option>
+                    <option value="12" {% if gun.default_calisma_saati == 12 %}selected{% endif %} style="color: #2c3e50; background: white;">12h</option>
+                    <option value="13" {% if gun.default_calisma_saati == 13 %}selected{% endif %} style="color: #2c3e50; background: white;">13h</option>
+                    <option value="14" {% if gun.default_calisma_saati == 14 %}selected{% endif %} style="color: #2c3e50; background: white;">14h</option>
+                    <option value="15" {% if gun.default_calisma_saati == 15 %}selected{% endif %} style="color: #2c3e50; background: white;">15h</option>
+                    <option value="16" {% if gun.default_calisma_saati == 16 %}selected{% endif %} style="color: #2c3e50; background: white;">16h</option>
+                    <option value="17" {% if gun.default_calisma_saati == 17 %}selected{% endif %} style="color: #2c3e50; background: white;">17h</option>
+                    <option value="18" {% if gun.default_calisma_saati == 18 %}selected{% endif %} style="color: #2c3e50; background: white;">18h</option>
+                    <option value="19" {% if gun.default_calisma_saati == 19 %}selected{% endif %} style="color: #2c3e50; background: white;">19h</option>
+                    <option value="20" {% if gun.default_calisma_saati == 20 %}selected{% endif %} style="color: #2c3e50; background: white;">20h</option>
+                    <option value="21" {% if gun.default_calisma_saati == 21 %}selected{% endif %} style="color: #2c3e50; background: white;">21h</option>
+                    <option value="22" {% if gun.default_calisma_saati == 22 %}selected{% endif %} style="color: #2c3e50; background: white;">22h</option>
+                    <option value="23" {% if gun.default_calisma_saati == 23 %}selected{% endif %} style="color: #2c3e50; background: white;">23h</option>
+                </select>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Station Rows -->
+        {% for istasyon in istasyonlar %}
+        <div class="gantt-station" data-station-id="{{ istasyon.id }}">
+            {{ istasyon.ad }}
+            {% if istasyon.kapasite %}
+            <small style="display: block; font-weight: normal; color: #666;">
+                (Kapasite: {{ istasyon.kapasite }})
+            </small>
+            {% endif %}
+        </div>
+        
+        <!-- Day cells for this station -->
+        {% for gun in gunler %}
+        <div class="gantt-cell {% if gun.is_today %}today{% endif %} {% if gun.is_weekend %}weekend{% endif %}" 
+             data-station-id="{{ istasyon.id }}" 
+             data-date="{{ gun.tarih|date:'Y-m-d' }}">
+            
+            <!-- Today indicator -->
+            {% if gun.is_today %}
+            <div class="today-indicator"></div>
+            {% endif %}
+            
+            <!-- Planned work orders for this station/date -->
+            {% for emir in planli_emirler %}
+                {% if emir.planlanan_istasyon.id == istasyon.id and emir.planlanan_baslangic_tarihi|date:'Y-m-d' == gun.tarih|date:'Y-m-d' %}
+                <div class="gantt-work-order op-{% if 'sargı' in emir.operasyon.operasyon_adi|lower %}sargi{% elif 'montaj' in emir.operasyon.operasyon_adi|lower %}montaj{% elif 'kurutma' in emir.operasyon.operasyon_adi|lower %}kurutma{% elif 'test' in emir.operasyon.operasyon_adi|lower %}test{% else %}other{% endif %}" 
+                     data-order-id="{{ emir.id }}" 
+                     data-duration="{{ emir.hesaplanan_sure_saat }}"
+                     data-date="{{ gun.tarih|date:'Y-m-d' }}"
+                     draggable="true">
+                    <div class="status-indicator status-{{ emir.hazirlik_durumu }}"></div>
+                    <strong>{{ emir.urun.ad }}</strong><br>
+                    {% if emir.operasyon.standart_adim %}{{ emir.operasyon.standart_adim.ad }}{% else %}{{ emir.operasyon.operasyon_adi }}{% endif %}<br>
+                    <small>{{ emir.planlanan_miktar }} {{ emir.urun.birim }}</small><br>
+                    <small style="color: #ffd700;">⏱️ {{ emir.hesaplanan_sure_saat }}h</small>
+                </div>
+                {% endif %}
+            {% endfor %}
+            
+            <!-- İstasyon+Gün bazında özel mesai -->
+            <div style="position: absolute; bottom: 2px; right: 2px; z-index: 10;">
+                <select onchange="updateCellWorkingHours('{{ istasyon.id }}', '{{ gun.tarih|date:'Y-m-d' }}', this.value)" 
+                        style="font-size: 8px; padding: 1px; width: 40px; opacity: 0.7;"
+                        id="cell-hours-{{ istasyon.id }}-{{ gun.tarih|date:'Y-m-d' }}"
+                        title="Bu gün bu istasyon için özel mesai">
+                    <option value="">Std</option>
+                    <option value="10">10h</option>
+                    <option value="11">11h</option>
+                    <option value="12">12h</option>
+                    <option value="14">14h</option>
+                    <option value="16">16h</option>
+                    <option value="18">18h</option>
+                    <option value="20">20h</option>
+                    <option value="24">24h</option>
+                </select>
+            </div>
+
+            <!-- Drop zone -->
+            <div class="gantt-dropzone" 
+                 data-station-id="{{ istasyon.id }}" 
+                 data-date="{{ gun.tarih|date:'Y-m-d' }}"></div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Unplanned Orders Sidebar -->
+<div class="unplanned-sidebar">
+    <div class="unplanned-header">
+        📋 Planlanmamış İş Emirleri
+    </div>
+    
+    <!-- Geri Alma Alanı -->
+    <div id="unplan-dropzone" class="unplan-dropzone" style="display: none; position: fixed; top: 0; right: 0; width: 300px; height: 100vh; z-index: 100; pointer-events: all;">
+        <div style="text-align: center; padding: 20px; border: 2px dashed #dc3545; border-radius: 8px; background: #f8d7da; color: #721c24; margin: 15px; pointer-events: all; margin-top: 100px;">
+            🗑️ Planlamayı İptal Et<br>
+            <small>İş emrini buraya bırakın</small><br>
+            <button onclick="debugUnplanZone()" style="margin-top: 10px; padding: 5px; font-size: 10px;">DEBUG TEST</button>
+            <button onclick="document.getElementById('unplan-dropzone').style.display='block'" style="margin-top: 5px; padding: 5px; font-size: 10px;">SHOW</button>
+        </div>
+    </div>
+    
+    {% for siparis_no, emirler in siparis_emirleri.items %}
+    <div style="margin-bottom: 15px;">
+        <div style="font-weight: bold; margin-bottom: 8px; color: #007cba;">
+            Sipariş: {{ siparis_no }}
+        </div>
+        {% for emir in emirler %}
+        <div class="unplanned-order op-{% if 'sargı' in emir.operasyon.operasyon_adi|lower %}sargi{% elif 'montaj' in emir.operasyon.operasyon_adi|lower %}montaj{% elif 'kurutma' in emir.operasyon.operasyon_adi|lower %}kurutma{% elif 'test' in emir.operasyon.operasyon_adi|lower %}test{% else %}other{% endif %}" 
+             data-order-id="{{ emir.id }}" 
+             draggable="true">
+            <div class="unplanned-order-header">
+                <div class="status-indicator status-{{ emir.hazirlik_durumu }}"></div>
+                {{ emir.urun.ad }}
+            </div>
+            <div class="unplanned-order-details">
+                İş Adımı: {% if emir.operasyon.standart_adim %}{{ emir.operasyon.standart_adim.ad }}{% else %}{{ emir.operasyon.operasyon_adi }}{% endif %}<br>
+                Miktar: {{ emir.planlanan_miktar }} {{ emir.urun.birim }}<br>
+                Süre: ⏱️ {{ emir.hesaplanan_sure_saat }}h<br>
+                Malzeme: {{ emir.hesapla_malzeme_hazir_tarihi|date:"d.m.Y" }}<br>
+                {% if emir.onceki_adimlar %}
+                <small style="color: #666;">
+                    Bağımlı: 
+                    {% for onceki in emir.onceki_adimlar %}
+                        <span style="color: {% if onceki.tamamlandi %}#28a745{% else %}#dc3545{% endif %};">
+                            {% if onceki.emir.operasyon.standart_adim %}{{ onceki.emir.operasyon.standart_adim.ad }}{% else %}{{ onceki.emir.operasyon.operasyon_adi }}{% endif %}
+                            {% if onceki.tamamlandi %}✓{% else %}⏳{% endif %}
+                        </span>
+                        {% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </small>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Drag & Drop JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let draggedElement = null;
+    let workingHours = {}; // günlük çalışma saatleri
+    let cellWorkingHours = {}; // istasyon+tarih bazında özel çalışma saatleri (key: "stationId-date")
+    
+    console.log('JavaScript yüklendi, drag & drop sistemi aktif');
+    
+    // Unplan zone'nin varlığını kontrol et
+    function testUnplanZone() {
+        const unplanZone = document.getElementById('unplan-dropzone');
+        console.log('TEST: Unplan zone element:', unplanZone);
+        if (unplanZone) {
+            console.log('TEST: Computed styles:', window.getComputedStyle(unplanZone));
+            console.log('TEST: Current display:', unplanZone.style.display);
+            console.log('TEST: Has unplan-dropzone class:', unplanZone.classList.contains('unplan-dropzone'));
+        }
+    }
+    
+    // Test fonksiyonunu çağır
+    setTimeout(testUnplanZone, 1000);
+    
+    // Debug fonksiyonu - global olarak erişilebilir
+    window.debugUnplanZone = function() {
+        const unplanZone = document.getElementById('unplan-dropzone');
+        console.log('=== DEBUG UNPLAN ZONE ===');
+        console.log('Element:', unplanZone);
+        console.log('Visible?', unplanZone.style.display !== 'none');
+        console.log('Position:', unplanZone.getBoundingClientRect());
+        console.log('Z-index:', window.getComputedStyle(unplanZone).zIndex);
+        console.log('Pointer events:', window.getComputedStyle(unplanZone).pointerEvents);
+        
+        // Manuel olarak drag-over class'ını ekle/çıkar
+        if (unplanZone.classList.contains('drag-over')) {
+            unplanZone.classList.remove('drag-over');
+            console.log('Drag-over class kaldırıldı');
+        } else {
+            unplanZone.classList.add('drag-over');
+            console.log('Drag-over class eklendi');
+        }
+    };
+    
+    // İş emirlerini kontrol et
+    const ganttOrders = document.querySelectorAll('.gantt-work-order');
+    const unplannedOrders = document.querySelectorAll('.unplanned-order');
+    console.log(`Gantt'ta ${ganttOrders.length} iş emri, Planlanmamış ${unplannedOrders.length} iş emri bulundu`);
+    
+    // Her iş emrine test click listener ekle
+    ganttOrders.forEach((order, index) => {
+        order.addEventListener('click', function() {
+            console.log(`Gantt iş emri ${index + 1} tıklandı:`, this.dataset.orderId);
+        });
+        
+        order.addEventListener('mousedown', function() {
+            console.log(`Gantt iş emri ${index + 1} mouse down:`, this.dataset.orderId);
+        });
+        
+        console.log(`İş emri ${index + 1} - draggable:`, order.draggable, 'data-order-id:', order.dataset.orderId, 'data-duration:', order.dataset.duration);
+        
+        // Her iş emrine direkt dragstart listener ekle
+        order.addEventListener('dragstart', function(e) {
+            console.log('DRAGSTART EVENT TRIGGERED for:', this.dataset.orderId);
+            draggedElement = this;
+            this.style.opacity = '0.5';
+            
+            if (this.classList.contains('gantt-work-order')) {
+                console.log('Geri alma alanı gösteriliyor');
+                document.getElementById('unplan-dropzone').style.display = 'block';
+            }
+        });
+    });
+    
+    // Çalışma saatleri cache'i (sayfa yüklendiğinde başlangıç değerleri)
+    document.querySelectorAll('.gantt-header select').forEach(select => {
+        const date = select.onchange.toString().match(/'([^']+)'/)[1];
+        workingHours[date] = parseInt(select.value);
+    });
+    
+    // Malzeme hazır tarihlerini parse et
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = dateStr.split('.');
+        if (parts.length !== 3) return null;
+        return new Date(2000 + parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+    
+    // Drag start
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.classList.contains('gantt-work-order') || e.target.classList.contains('unplanned-order')) {
+            draggedElement = e.target;
+            e.target.style.opacity = '0.5';
+            
+            console.log('Drag start:', e.target.classList, 'Order ID:', e.target.dataset.orderId);
+            
+            // Gantt'tan sürükleniyorsa geri alma alanını göster
+            if (e.target.classList.contains('gantt-work-order')) {
+                console.log('Geri alma alanı gösteriliyor');
+                const unplanZone = document.getElementById('unplan-dropzone');
+                if (unplanZone) {
+                    unplanZone.style.display = 'block';
+                    console.log('Unplan zone display set to block');
+                } else {
+                    console.error('Unplan zone element not found!');
+                }
+            }
+        }
+    });
+    
+    // Drag end
+    document.addEventListener('dragend', function(e) {
+        if (e.target.classList.contains('gantt-work-order') || e.target.classList.contains('unplanned-order')) {
+            e.target.style.opacity = '';
+            
+            // Geri alma alanını gizle
+            document.getElementById('unplan-dropzone').style.display = 'none';
+            
+            // Tüm hata mesajlarını temizle
+            document.querySelectorAll('.gantt-dropzone').forEach(dz => {
+                dz.classList.remove('drag-error', 'drag-over');
+                dz.title = '';
+            });
+            
+            draggedElement = null;
+        }
+    });
+    
+    // Validasyon fonksiyonları
+    function validateDrop(dropzone, draggedElement) {
+        const date = dropzone.dataset.date;
+        const stationId = dropzone.dataset.stationId;
+        const orderId = draggedElement.dataset.orderId;
+        
+        // Çalışma saati kontrolü
+        const availableHours = getAvailableHours(stationId, date);
+        if (availableHours === 0) {
+            return {valid: false, error: 'Bu gün/istasyon çalışma saati 0. İş emri planlanamaز.'};
+        }
+        
+        // Kapasite kontrolü - toplam süreyi kontrol et
+        const cell = dropzone.parentElement;
+        const existingOrders = cell.querySelectorAll('.gantt-work-order');
+        let totalHours = 0;
+        
+        // Mevcut emirlerin toplam süresini hesapla
+        existingOrders.forEach(order => {
+            const duration = parseFloat(order.dataset.duration || 0);
+            totalHours += duration;
+        });
+        
+        // Yeni emirn süresini ekle
+        let newOrderDuration = 0;
+        if (draggedElement.dataset.duration) {
+            newOrderDuration = parseFloat(draggedElement.dataset.duration);
+        } else {
+            const timeText = draggedElement.querySelector('small[style*="ffd700"], [style*="⏱️"]');
+            if (timeText) {
+                const match = timeText.textContent.match(/(\d+[.,]?\d*)h/);
+                if (match) {
+                    const durationStr = match[1].replace(',', '.');
+                    newOrderDuration = parseFloat(durationStr);
+                }
+            }
+        }
+        
+        // Toplam süre kontrolü
+        const checkStationId = dropzone.dataset.stationId;
+        const stationName = document.querySelector(`[data-station-id="${checkStationId}"].gantt-station`)?.textContent?.toLowerCase() || '';
+        const isKurutma = stationName.includes('kurutma');
+        const maxAvailableHours = getAvailableHours(stationId, date);
+        
+        const newTotalHours = totalHours + newOrderDuration;
+        
+        // Soft limit - uyarı ver ama engellenme
+        if (newTotalHours > maxAvailableHours) {
+            console.log(`Uyarı: Kapasite aşımı ${newTotalHours}h > ${maxAvailableHours}h`);
+            // return {valid: false, error: `Kapasite aşılacak: ${newTotalHours.toFixed(1)}h > ${maxAvailableHours}h. Sonraki güne sarkıtılacak.`};
+        }
+        
+        // Malzeme hazır tarihi kontrolü (sadece planlanmamış emirlerden gelenlere)
+        if (draggedElement.classList.contains('unplanned-order')) {
+            const materialDateElement = draggedElement.querySelector('small');
+            if (materialDateElement) {
+                const materialDateText = materialDateElement.textContent.match(/(\d{2}\.\d{2}\.\d{4})/);
+                if (materialDateText) {
+                    const materialDate = parseDate(materialDateText[1]);
+                    const targetDate = new Date(date);
+                    
+                    if (materialDate && targetDate < materialDate) {
+                        return {valid: false, error: `Malzemeler ${materialDateText[1]} tarihinde hazır olacak. Daha erken planlanamaز.`};
+                    }
+                }
+            }
+        }
+        
+        return {valid: true};
+    }
+    
+    // Drag over
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const dropzone = e.target.closest('.gantt-dropzone');
+        const unplanZone = e.target.closest('.unplan-dropzone');
+        
+        // Debug: Her 100ms'de bir log (çok spam olmaması için)
+        if (!window.lastDragOverLog || Date.now() - window.lastDragOverLog > 100) {
+            console.log('DRAGOVER - target:', e.target.className, 'dropzone:', !!dropzone, 'unplanZone:', !!unplanZone);
+            window.lastDragOverLog = Date.now();
+        }
+        
+        if (dropzone && draggedElement) {
+            const validation = validateDrop(dropzone, draggedElement);
+            
+            if (validation.valid) {
+                dropzone.classList.add('drag-over');
+                dropzone.classList.remove('drag-error');
+                dropzone.title = '';
+            } else {
+                dropzone.classList.add('drag-error');
+                dropzone.classList.remove('drag-over');
+                dropzone.title = validation.error;
+            }
+        } else if (unplanZone && draggedElement && draggedElement.classList.contains('gantt-work-order')) {
+            console.log('Unplan zone drag over detected');
+            unplanZone.classList.add('drag-over');
+        }
+        
+        // Alternatif detection - unplan-dropzone id'sine göre
+        if (e.target.id === 'unplan-dropzone' || e.target.closest('#unplan-dropzone')) {
+            console.log('Alternative unplan zone detection worked');
+            if (draggedElement && draggedElement.classList.contains('gantt-work-order')) {
+                const altUnplanZone = document.getElementById('unplan-dropzone');
+                altUnplanZone.classList.add('drag-over');
+            }
+        }
+    });
+    
+    // Drag leave
+    document.addEventListener('dragleave', function(e) {
+        const dropzone = e.target.closest('.gantt-dropzone');
+        const unplanZone = e.target.closest('.unplan-dropzone');
+        
+        if (dropzone && (!e.relatedTarget || !dropzone.contains(e.relatedTarget))) {
+            dropzone.classList.remove('drag-over', 'drag-error');
+            dropzone.title = '';
+        } else if (unplanZone && (!e.relatedTarget || !unplanZone.contains(e.relatedTarget))) {
+            console.log('Unplan zone drag leave detected');
+            unplanZone.classList.remove('drag-over');
+        }
+    });
+    
+    // Drop
+    document.addEventListener('drop', function(e) {
+        console.log('DROP EVENT TRIGGERED on:', e.target);
+        console.log('draggedElement:', draggedElement);
+        e.preventDefault();
+        const dropzone = e.target.closest('.gantt-dropzone');
+        const unplanZone = e.target.closest('.unplan-dropzone');
+        console.log('Dropzone found:', !!dropzone, 'UnplanZone found:', !!unplanZone);
+        
+        if (unplanZone && draggedElement && draggedElement.classList.contains('gantt-work-order')) {
+            // Geri alma işlemi
+            const orderId = draggedElement.dataset.orderId;
+            
+            console.log('Geri alma işlemi başlatılıyor, Order ID:', orderId);
+            
+            unplanZone.classList.remove('drag-over');
+            
+            // Planlamayı kaldır
+            unplanWorkOrder(orderId);
+            
+        } else if (dropzone && draggedElement) {
+            const validation = validateDrop(dropzone, draggedElement);
+            
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+            
+            const dropStationId = dropzone.dataset.stationId;
+            const dropDate = dropzone.dataset.date;
+            const dropOrderId = draggedElement.dataset.orderId;
+            
+            dropzone.classList.remove('drag-over', 'drag-error');
+            dropzone.title = '';
+            
+            // Kapasite aşımı kontrolü ve otomatik sarma
+            const cell = dropzone.parentElement;
+            const dropStationName = document.querySelector(`[data-station-id="${dropStationId}"].gantt-station`)?.textContent?.toLowerCase() || '';
+            const isKurutmaStation = dropStationName.includes('kurutma');
+            const availableHours = getAvailableHours(dropStationId, dropDate);
+            
+            // Mevcut kapasite hesapla
+            let currentCapacity = 0;
+            const existingOrders = cell.querySelectorAll('.gantt-work-order');
+            console.log('Mevcut iş emirleri:', existingOrders.length);
+            
+            existingOrders.forEach((order, index) => {
+                const duration = parseFloat(order.dataset.duration || 0);
+                console.log(`Order ${index}: duration=${order.dataset.duration}, parsed=${duration}`);
+                currentCapacity += duration;
+            });
+            
+            console.log('Toplam mevcut kapasite:', currentCapacity);
+            
+            // Yeni iş emrinin süresi
+            let newOrderDuration = 0;
+            console.log('Süre bilgisi aranıyor, element:', draggedElement);
+            
+            // Unplanned order'da süre bilgisi .unplanned-order-details div'inde
+            let timeText = draggedElement.querySelector('.unplanned-order-details') || 
+                          draggedElement.querySelector('small[style*="#ffd700"]') || 
+                          draggedElement.querySelector('small[style*="ffd700"]') ||
+                          draggedElement;
+                          
+            console.log('Bulunan süre elementi:', timeText);
+            if (timeText) {
+                console.log('Süre elementi text:', timeText.textContent);
+                // Türkçe decimal format (virgül) ve nokta formatını destekle
+                const match = timeText.textContent.match(/(\d+[.,]?\d*)h/);
+                console.log('Regex match:', match);
+                if (match) {
+                    // Virgülü noktaya çevir ve parse et
+                    const durationStr = match[1].replace(',', '.');
+                    newOrderDuration = parseFloat(durationStr);
+                    console.log('Parsed duration:', newOrderDuration);
+                }
+            }
+            
+            // Planlanmamış listeden geliyor ise
+            if (draggedElement.classList.contains('unplanned-order')) {
+                // ÖNCELİKLE kapasite kontrolü yap
+                console.log('Kapasite kontrol: Current:', currentCapacity, 'New:', newOrderDuration, 'Available:', availableHours);
+                
+                if (currentCapacity + newOrderDuration > availableHours) {
+                    const overflowAmount = (currentCapacity + newOrderDuration) - availableHours;
+                    console.log('Kapasite aşımı tespit edildi!', overflowAmount);
+                    
+                    if (confirm(`Kapasite aşımı: ${(currentCapacity + newOrderDuration).toFixed(1)}h > ${availableHours}h\nAşan kısmı sonraki güne taşımak ister misiniz?`)) {
+                        // Önce normal planlama yap
+                        updateWorkOrderPlanning(dropOrderId, dropStationId, dropDate, true, dropzone.parentElement);
+                        
+                        // Sonra overflow işlemini yap
+                        setTimeout(() => {
+                            const elementReference = document.querySelector(`[data-order-id="${dropOrderId}"]`);
+                            console.log('Element reference bulundu:', elementReference);
+                            handleCapacityOverflow(dropStationId, dropDate, overflowAmount, elementReference);
+                        }, 500);
+                    } else {
+                        // Kullanıcı overflow istemiyorsa normal planlama yap
+                        updateWorkOrderPlanning(dropOrderId, dropStationId, dropDate, true, dropzone.parentElement);
+                    }
+                } else {
+                    // Kapasite aşımı yok, normal planlama
+                    updateWorkOrderPlanning(dropOrderId, dropStationId, dropDate, true, dropzone.parentElement);
+                }
+            } else {
+                // Gantt içinde taşıma
+                updateWorkOrderPlanning(dropOrderId, dropStationId, dropDate, false, dropzone.parentElement);
+            }
+        }
+    });
+    
+    function updateWorkOrderPlanning(orderId, stationId, date, removeFromUnplanned, targetCell) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // draggedElement'i local değişkene kaydet (async işlem sırasında kaybolabilir)
+        const currentDraggedElement = draggedElement;
+        
+        fetch('/admin/production/uretimplanlama/update-planning/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                station_id: stationId,
+                date: date
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('İş emri başarıyla planlandı');
+                
+                // DOM'u güncelle
+                if (removeFromUnplanned && currentDraggedElement) {
+                    // Planlanmamış listeden geliyorsa: kopyala ve ekle, sonra orijinali sil
+                    const newElement = currentDraggedElement.cloneNode(true);
+                    newElement.classList.remove('unplanned-order');
+                    newElement.classList.add('gantt-work-order');
+                    newElement.draggable = true; // Draggable özelliği ekle
+                    
+                    // Data attributes ekle
+                    newElement.dataset.date = date;
+                    // Duration'ı unplanned order'dan al
+                    const durationText = currentDraggedElement.querySelector('.unplanned-order-details');
+                    if (durationText) {
+                        const match = durationText.textContent.match(/(\d+[.,]?\d*)h/);
+                        if (match) {
+                            const durationStr = match[1].replace(',', '.');
+                            newElement.dataset.duration = parseFloat(durationStr);
+                            console.log('Element dataset.duration set to:', newElement.dataset.duration);
+                        }
+                    }
+                    
+                    targetCell.appendChild(newElement);
+                    currentDraggedElement.remove();
+                    
+                    // Element boyut ve tooltip güncelle
+                    updateWorkOrderSizeAndTooltip(newElement, targetCell, date);
+                    
+                    // Kapasite güncelle
+                    updateCellCapacity(targetCell, date);
+                    
+                    // Draggable durumunu kontrol et
+                    ensureDraggable();
+                } else if (currentDraggedElement) {
+                    // Gantt içinde taşıma: eski hücreyi de güncelle
+                    const oldCell = currentDraggedElement.closest('.gantt-cell');
+                    const oldDate = oldCell ? oldCell.dataset.date : null;
+                    
+                    const newElement = currentDraggedElement.cloneNode(true);
+                    newElement.dataset.date = date; // Yeni tarihi güncelle
+                    newElement.draggable = true; // Draggable özelliği ekle
+                    targetCell.appendChild(newElement);
+                    
+                    currentDraggedElement.remove();
+                    
+                    // Element boyut ve tooltip güncelle
+                    updateWorkOrderSizeAndTooltip(newElement, targetCell, date);
+                    
+                    // Her iki hücrenin kapasitesini güncelle
+                    updateCellCapacity(targetCell, date);
+                    if (oldCell && oldDate) {
+                        updateCellCapacity(oldCell, oldDate);
+                    }
+                    
+                    // Draggable durumunu kontrol et
+                    ensureDraggable();
+                }
+                
+            } else {
+                console.error('Planlama hatası:', data.error);
+                alert('Planlama sırasında hata oluştu: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('AJAX Hatası (updateWorkOrderPlanning):', error);
+            console.error('Request URL:', '/admin/production/uretimplanlama/update-planning/');
+            console.error('CSRF Token:', csrfToken);
+            console.error('Request Body:', JSON.stringify({
+                order_id: orderId,
+                station_id: stationId,
+                date: date
+            }));
+            alert('Bağlantı hatası oluştu: ' + error.message);
+        });
+    }
+    
+    function unplanWorkOrder(orderId) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch('/admin/production/uretimplanlama/unplan-order/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                order_id: orderId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('İş emri planlaması kaldırıldı');
+                // Sayfayı yenile
+                window.location.reload();
+            } else {
+                console.error('Planlama kaldırma hatası:', data.error);
+                alert('Planlama kaldırma sırasında hata oluştu: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Ağ hatası:', error);
+            alert('Bağlantı hatası oluştu.');
+        });
+    }
+    
+    function updateWorkingHours(date, hours) {
+        workingHours[date] = parseInt(hours);
+        console.log('Çalışma saati güncellendi:', date, hours + ' saat');
+        
+        // Bu tarihteki tüm hücrelerin iş emirlerinin boyutlarını güncelle
+        const cells = document.querySelectorAll(`[data-date="${date}"]`);
+        cells.forEach(cell => {
+            if (cell.classList.contains('gantt-cell')) {
+                const workOrders = cell.querySelectorAll('.gantt-work-order');
+                workOrders.forEach(order => {
+                    updateWorkOrderSizeAndTooltip(order, cell, date);
+                });
+            }
+        });
+        
+        // Bu tarihteki tüm hücrelerin kapasitesini güncelle
+        updateCapacityVisualization(date);
+    }
+    
+    // İstasyon ve tarih bazında mevcut çalışma saatini hesapla
+    function getAvailableHours(stationId, date) {
+        const stationName = document.querySelector(`[data-station-id="${stationId}"].gantt-station`)?.textContent?.toLowerCase() || '';
+        const isKurutma = stationName.includes('kurutma');
+        
+        // Kurutma fırını için her zaman 24 saat
+        if (isKurutma) {
+            return 24;
+        }
+        
+        // İstasyon+gün bazında özel çalışma saati varsa onu kullan
+        const cellKey = `${stationId}-${date}`;
+        if (cellWorkingHours[cellKey]) {
+            return cellWorkingHours[cellKey];
+        }
+        
+        // Günlük çalışma saati varsa onu kullan, yoksa varsayılan 9
+        return workingHours[date] || 9;
+    }
+
+    // İstasyon+Gün bazında özel çalışma saati güncelle
+    function updateCellWorkingHours(stationId, date, hours) {
+        console.log(`=== HÜCRE ÇALIŞMA SAATİ GÜNCELLENİYOR ===`);
+        console.log('Station:', stationId, 'Date:', date, 'Hours:', hours);
+        
+        const cellKey = `${stationId}-${date}`;
+        
+        if (hours === '') {
+            // Standart çalışma saatine dön
+            delete cellWorkingHours[cellKey];
+            console.log(`İstasyon ${stationId} - ${date} standart çalışma saatine döndü`);
+        } else {
+            cellWorkingHours[cellKey] = parseInt(hours);
+            console.log(`İstasyon ${stationId} - ${date} özel çalışma saati: ${hours}h`);
+        }
+        
+        // Bu hücredeki iş emirlerini ve kapasiteyi güncelle
+        const cell = document.querySelector(`[data-station-id="${stationId}"][data-date="${date}"]`);
+        if (cell && cell.classList.contains('gantt-cell')) {
+            const workOrders = cell.querySelectorAll('.gantt-work-order');
+            workOrders.forEach(order => {
+                updateWorkOrderSizeAndTooltip(order, cell, date);
+            });
+            updateCellCapacity(cell, date);
+        }
+    }
+    
+    // Global fonksiyon - template'ten erişilebilir
+    window.updateCellWorkingHours = updateCellWorkingHours;
+    
+    // Kapasite aşımı durumunda sonraki günlere taşı
+    function handleCapacityOverflow(stationId, currentDate, overflowAmount, originalElement) {
+        console.log(`=== KAPASITE AŞIMI İŞLENİYOR ===`);
+        console.log('Station:', stationId, 'Date:', currentDate, 'Overflow:', overflowAmount);
+        console.log('Original element:', originalElement);
+        
+        if (!originalElement) {
+            console.error('Original element not found!');
+            return;
+        }
+        
+        // Sonraki günü bul
+        const currentDateObj = new Date(currentDate);
+        let nextDate = new Date(currentDateObj);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        // Sonraki günün string formatı (YYYY-MM-DD)
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+        
+        // Sonraki günün hücresini bul
+        const nextDayCell = document.querySelector(`[data-station-id="${stationId}"][data-date="${nextDateStr}"]`);
+        
+        if (nextDayCell) {
+            // Yeni bir iş emri oluştur (aşan kısım için)
+            const overflowElement = originalElement.cloneNode(true);
+            overflowElement.draggable = true; // Draggable özelliği ekle
+            
+            // Süre bilgisini güncelle - sadece aşan kısmı
+            const timeText = overflowElement.querySelector('[style*="⏱️"]');
+            if (timeText) {
+                timeText.innerHTML = timeText.innerHTML.replace(/(\d+\.?\d*)h/, `${overflowAmount.toFixed(1)}h`);
+            }
+            
+            overflowElement.dataset.duration = overflowAmount.toFixed(1);
+            overflowElement.classList.add('overflow-order');
+            overflowElement.style.background = 'linear-gradient(135deg, #fd7e14, #e85d04)'; // Turuncu - aşım göstergesi
+            
+            // Başlığa aşım belirteci ekle
+            const titleElement = overflowElement.querySelector('strong');
+            if (titleElement) {
+                titleElement.textContent = `🔀 ${titleElement.textContent}`;
+            }
+            
+            // Sonraki güne ekle
+            nextDayCell.appendChild(overflowElement);
+            
+            // Her iki hücrenin kapasitesini güncelle
+            updateWorkOrderSizeAndTooltip(overflowElement, nextDayCell, nextDateStr);
+            updateCellCapacity(nextDayCell, nextDateStr);
+            
+            // Orijinal iş emrinin süresini azalt (sadece bugüne sığan kısım)
+            const stationName = document.querySelector(`[data-station-id="${stationId}"].gantt-station`)?.textContent?.toLowerCase() || '';
+            const isKurutma = stationName.includes('kurutma');
+            const availableHours = getAvailableHours(stationId, currentDate);
+            
+            const originalDuration = parseFloat(originalElement.dataset.duration || 0);
+            const todayDuration = originalDuration - overflowAmount;
+            
+            if (todayDuration > 0) {
+                // Bugüne kalacak kısmı güncelle
+                originalElement.dataset.duration = todayDuration.toFixed(1);
+                const originalTimeText = originalElement.querySelector('[style*="⏱️"]');
+                if (originalTimeText) {
+                    originalTimeText.innerHTML = originalTimeText.innerHTML.replace(/(\d+\.?\d*)h/, `${todayDuration.toFixed(1)}h`);
+                }
+                
+                // Bugünkü elementin boyutunu güncelle
+                const currentDayCell = document.querySelector(`[data-station-id="${stationId}"][data-date="${currentDate}"]`);
+                if (currentDayCell) {
+                    updateWorkOrderSizeAndTooltip(originalElement, currentDayCell, currentDate);
+                    updateCellCapacity(currentDayCell, currentDate);
+                }
+            }
+            
+            console.log(`Aşım işlendi: Bugün ${todayDuration.toFixed(1)}h, yarın ${overflowAmount.toFixed(1)}h`);
+        } else {
+            alert(`Sonraki gün (${nextDateStr}) için hücre bulunamadı.`);
+        }
+    }
+
+    // Tek bir iş emrinin boyut ve tooltip'ini güncelle
+    function updateWorkOrderSizeAndTooltip(order, cell, date) {
+        const stationId = cell.dataset.stationId;
+        const stationName = document.querySelector(`[data-station-id="${stationId}"].gantt-station`)?.textContent?.toLowerCase() || '';
+        const isKurutma = stationName.includes('kurutma');
+        const availableHours = getAvailableHours(stationId, date);
+        
+        // Duration'ı al
+        let duration = parseFloat(order.dataset.duration || 0);
+        if (duration === 0) {
+            const timeText = order.querySelector('[style*="⏱️"]');
+            if (timeText) {
+                const match = timeText.textContent.match(/(\d+\.?\d*)h/);
+                if (match) {
+                    duration = parseFloat(match[1]);
+                    order.dataset.duration = duration;
+                }
+            }
+        }
+        
+        // İş emrinin boyutunu çalışma saatine orantılı ayarla
+        const heightPercent = availableHours > 0 ? Math.min((duration / availableHours) * 100, 100) : 0;
+        const cellHeight = 76; // .gantt-cell min-height - padding
+        const orderHeight = Math.max((cellHeight - 4) * (heightPercent / 100), 22); // Min 22px
+        
+        order.style.height = `${orderHeight}px`;
+        order.style.display = 'flex';
+        order.style.flexDirection = 'column';
+        order.style.justifyContent = 'center';
+        order.style.alignItems = 'stretch';
+        
+        // Küçük emirler için compact class ekle
+        if (orderHeight < 35) {
+            order.classList.add('compact');
+        } else {
+            order.classList.remove('compact');
+        }
+        
+        // Tooltip - tam bilgi ile
+        const productName = order.querySelector('strong')?.textContent || 'İş Emri';
+        const siparisText = order.querySelector('small')?.textContent || '';
+        order.title = `${productName}\n${siparisText}\nSüre: ${duration}h\nKapasite: ${heightPercent.toFixed(1)}%`;
+    }
+
+    function updateCapacityVisualization(date) {
+        // Belirli bir tarihteki tüm istasyon hücrelerini bul
+        const cells = document.querySelectorAll(`[data-date="${date}"]`);
+        
+        cells.forEach(cell => {
+            if (cell.classList.contains('gantt-cell')) {
+                updateCellCapacity(cell, date);
+            }
+        });
+    }
+    
+    function updateCellCapacity(cell, date) {
+        const workOrders = cell.querySelectorAll('.gantt-work-order');
+        let totalHours = 0;
+        
+        // Kurutma fırını özel durumu - 24 saat çalışır
+        const stationId = cell.dataset.stationId;
+        const stationName = document.querySelector(`[data-station-id="${stationId}"].gantt-station`)?.textContent?.toLowerCase() || '';
+        const isKurutma = stationName.includes('kurutma');
+        
+        const availableHours = getAvailableHours(stationId, date);
+        
+        // Hücredeki tüm iş emirlerinin sürelerini topla ve boyutlarını ayarla
+        workOrders.forEach(order => {
+            // Süreyi data attribute'undan al, yoksa text'ten parse et
+            let duration = parseFloat(order.dataset.duration || 0);
+            if (!duration) {
+                const timeText = order.querySelector('small[style*="ffd700"]');
+                if (timeText) {
+                    const match = timeText.textContent.match(/(\d+\.?\d*)h/);
+                    if (match) {
+                        duration = parseFloat(match[1]);
+                        order.dataset.duration = duration; // Cache'le
+                    }
+                }
+            }
+            totalHours += duration;
+            
+            // İş emrinin boyutunu çalışma saatine orantılı ayarla
+            const heightPercent = availableHours > 0 ? Math.min((duration / availableHours) * 100, 100) : 0;
+            const cellHeight = 76; // .gantt-cell min-height - padding
+            const orderHeight = Math.max((cellHeight - 4) * (heightPercent / 100), 22); // Min 22px
+            
+            order.style.height = `${orderHeight}px`;
+            order.style.display = 'flex';
+            order.style.flexDirection = 'column';
+            order.style.justifyContent = 'center';
+            order.style.alignItems = 'stretch';
+            
+            // Küçük emirler için compact class ekle
+            if (orderHeight < 35) {
+                order.classList.add('compact');
+            } else {
+                order.classList.remove('compact');
+            }
+            
+            // Tooltip - tam bilgi ile
+            const productName = order.querySelector('strong')?.textContent || 'İş Emri';
+            const operation = order.querySelector('strong')?.nextSibling?.nextSibling?.textContent?.trim() || 'Operasyon';
+            const quantity = order.querySelector('small')?.textContent || '';
+            
+            order.title = `${productName}\\n${operation}\\n${quantity}\\nSüre: ${duration}h / ${availableHours}h (${(duration/availableHours*100).toFixed(1)}%)`;
+        });
+        
+        const capacityPercent = availableHours > 0 ? Math.min((totalHours / availableHours) * 100, 100) : 0;
+        
+        // Progress bar ekle veya güncelle
+        let progressBar = cell.querySelector('.capacity-progress');
+        if (!progressBar) {
+            progressBar = document.createElement('div');
+            progressBar.className = 'capacity-progress';
+            cell.appendChild(progressBar);
+        }
+        
+        // Progress bar stilini güncelle - farklı renkler
+        let barColor = '#28a745'; // Yeşil (normal)
+        if (capacityPercent >= 150) {
+            barColor = '#6f42c1'; // Mor (çok aşım)
+        } else if (capacityPercent >= 120) {
+            barColor = '#dc3545'; // Kırmızı (aşım)
+        } else if (capacityPercent >= 100) {
+            barColor = '#fd7e14'; // Turuncu (tam dolu)
+        } else if (capacityPercent >= 80) {
+            barColor = '#ffc107'; // Sarı (yoğun)
+        }
+        
+        progressBar.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: ${barColor};
+            width: ${Math.min(capacityPercent, 100)}%;
+            transition: width 0.3s, background 0.3s;
+            z-index: 5;
+        `;
+        
+        // Aşım durumunda çizgili pattern ekle
+        if (capacityPercent > 100) {
+            progressBar.style.background = `repeating-linear-gradient(45deg, ${barColor}, ${barColor} 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 20px)`;
+        }
+        
+        // Hücre tooltip'i
+        cell.title = `Toplam Kapasite: ${totalHours.toFixed(1)}h / ${availableHours}h (${capacityPercent.toFixed(1)}%)`;
+    }
+    
+    // Tüm iş emirlerinin draggable olduğundan emin ol
+    function ensureDraggable() {
+        const workOrders = document.querySelectorAll('.gantt-work-order, .unplanned-order');
+        workOrders.forEach(order => {
+            if (!order.draggable) {
+                order.draggable = true;
+                console.log('Draggable attribute eksikti, eklendi:', order.dataset.orderId);
+            }
+        });
+    }
+
+    // Sayfa yüklendiğinde tüm hücrelerin kapasitesini hesapla
+    function initializeCapacityVisualization() {
+        const cells = document.querySelectorAll('.gantt-cell');
+        cells.forEach(cell => {
+            const date = cell.dataset.date;
+            if (date) {
+                updateCellCapacity(cell, date);
+            }
+        });
+    }
+    
+    // Sayfa yüklendiğinde başlat
+    setTimeout(() => {
+        console.log('Kapasite görselleştirmesi başlatılıyor...');
+        ensureDraggable();
+        initializeCapacityVisualization();
+        console.log('Kapasite görselleştirmesi tamamlandı');
+    }, 100);
+});
+</script>
+
+<!-- CSRF Token -->
+{% csrf_token %}
+
+{% endblock %}

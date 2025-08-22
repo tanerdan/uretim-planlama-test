@@ -905,6 +905,11 @@ class IsAkisiOperasyon(models.Model):
         IsIstasyonu, on_delete=models.PROTECT,
         verbose_name="İş İstasyonu"
     )
+    standart_adim = models.ForeignKey(
+        StandardIsAdimi, on_delete=models.PROTECT,
+        null=True, blank=True,
+        verbose_name="Standart İş Adımı"
+    )
     
     # Operasyon Bilgileri
     sira_no = models.PositiveSmallIntegerField(verbose_name="Sıra No", editable=False)
@@ -1073,7 +1078,8 @@ class IsEmri(models.Model):
     planlanan_miktar = models.PositiveIntegerField(default=1, verbose_name="Planlanan Miktar")
     uretilen_miktar = models.PositiveIntegerField(default=0, verbose_name="Üretilen Miktar")
     
-    # Planlama Tarihleri
+    # Planlama Bilgileri
+    planlanan_istasyon = models.ForeignKey(IsIstasyonu, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Planlanan İstasyon")
     planlanan_baslangic_tarihi = models.DateField(default="2024-01-01", verbose_name="Planlanan Başlangıç Tarihi")
     planlanan_baslangic_saati = models.TimeField(default="08:00", verbose_name="Planlanan Başlangıç Saati")
     planlanan_bitis_tarihi = models.DateField(default="2024-01-01", verbose_name="Planlanan Bitiş Tarihi") 
@@ -1176,6 +1182,214 @@ class IsEmri(models.Model):
             naive_datetime = datetime.combine(self.gercek_baslangic_tarihi, self.gercek_baslangic_saati)
             return timezone.make_aware(naive_datetime)
         return None
+    
+    def hesapla_uretim_hazir_tarihi(self):
+        """Üretime hazır olma tarihini hesaplar"""
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        import json
+        
+        hazir_tarihleri = []
+        
+        # 1. Malzeme hazır olma tarihi
+        malzeme_hazir_tarihi = self.hesapla_malzeme_hazir_tarihi()
+        if malzeme_hazir_tarihi:
+            hazir_tarihleri.append(malzeme_hazir_tarihi)
+        
+        # 2. Bağımlı operasyonların tamamlanma tarihi
+        bagimlillik_tarihi = self.hesapla_bagimlillik_hazir_tarihi()
+        if bagimlillik_tarihi:
+            hazir_tarihleri.append(bagimlillik_tarihi)
+        
+        # 3. Ara ürün hazır olma tarihi
+        ara_urun_tarihi = self.hesapla_ara_urun_hazir_tarihi()
+        if ara_urun_tarihi:
+            hazir_tarihleri.append(ara_urun_tarihi)
+        
+        # En geç tarih seçilir
+        if hazir_tarihleri:
+            return max(hazir_tarihleri)
+        
+        # Hiçbir engel yoksa bugün hazır
+        return timezone.now().date()
+    
+    def hesapla_malzeme_hazir_tarihi(self):
+        """Bu operasyon için gerekli malzemelerin hazır olacağı tarihi hesaplar"""
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from django.db.models import Q
+        
+        # print(f"MATERIAL DATE CALLED for IsEmri ID: {self.id}")
+        
+        # Operasyon yoksa bugün hazır
+        if not self.operasyon:
+            # print(f"No operation for IsEmri {self.id}, returning today")
+            return timezone.now().date()
+        
+        # Bu sipariş için malzeme ihtiyaçlarını bul
+        if not (self.siparis_kalemi and self.siparis_kalemi.siparis):
+            # Sipariş kalemi yoksa operasyon tipine göre karar ver
+            if self.operasyon:
+                op_adi = str(self.operasyon.operasyon_adi).lower()
+                if 'sargı' in op_adi:
+                    # Sargı operasyonları için genel malzeme tarihi (25.08.2025)
+                    from datetime import date
+                    return date(2025, 8, 25)
+                elif any(x in op_adi for x in ['montaj', 'kurutma', 'test']):
+                    # Montaj/kurutma/test için stoktan - bugün hazır
+                    return timezone.now().date()
+            return timezone.now().date()
+            
+        # Montaj/kurutma/test operasyonları için malzeme kontrolü yapma
+        if self.operasyon:
+            op_adi = str(self.operasyon.operasyon_adi).lower()
+            if any(x in op_adi for x in ['montaj', 'kurutma', 'test']):
+                # print(f"OVERRIDE - {op_adi} operasyonu için stoktan malzeme")
+                return timezone.now().date()
+            
+        # Bu siparişle ilgili malzeme ihtiyaçlarını bul
+        
+        # SQLite JSON contains desteklemediği için tüm malzeme ihtiyaçlarını getir ve filtrele
+        import json
+        
+        malzeme_ihtiyaclar = MalzemeIhtiyac.objects.all()
+        siparis_no = self.siparis_kalemi.siparis.siparis_no
+        
+        en_gec_tarih = timezone.now().date()
+        bulunan_ihtiyac = 0
+        bulunan_kalem = 0
+        
+        # Debug: Toplam kayıt sayıları
+        # print(f"DEBUG - Total MalzemeIhtiyac: {malzeme_ihtiyaclar.count()}")
+        # print(f"DEBUG - Siparis NO: {siparis_no}")
+        
+        for ihtiyac in malzeme_ihtiyaclar:
+            # JSON field'ında sipariş numarası var mı kontrol et
+            try:
+                ilgili_siparisler = ihtiyac.ilgili_siparisler or []
+                if siparis_no not in str(ilgili_siparisler):
+                    continue
+                bulunan_ihtiyac += 1
+                # print(f"DEBUG - Found requirement ID: {ihtiyac.id}")
+            except:
+                continue
+                
+            # Stoktan kullanılacak malzemeler için tarih hesaplaması yapma
+            if ihtiyac.islem_tipi == 'stoktan_kullan':
+                # print(f"SKIP - Stoktan kullan ID {ihtiyac.id}")
+                continue
+            else:
+                # print(f"PROCESS - Satin al ID {ihtiyac.id}")
+                
+                # Bu malzeme için satın alma siparişlerini bul
+                satinalma_kalemleri = SatinAlmaKalemi.objects.filter(
+                    malzeme_ihtiyaci=ihtiyac,
+                    siparis__durum__in=['bekliyor', 'onaylandi', 'gonderildi']
+                )
+                
+                # print(f"DEBUG - Item count for requirement ID {ihtiyac.id}: {satinalma_kalemleri.count()}")
+                
+                # En erken gelecek malzeme tarihini al
+                for kalem in satinalma_kalemleri:
+                    bulunan_kalem += 1
+                    # SatinAlmaKalemi'nden sipariş tarihini al
+                    siparis_teslim = kalem.siparis.guncel_teslim_tarihi or kalem.siparis.teslim_tarihi
+                    # print(f"DEBUG - Kalem teslim tarihi: {siparis_teslim}")
+                    if siparis_teslim and siparis_teslim > en_gec_tarih:
+                        en_gec_tarih = siparis_teslim
+        
+        # print(f"DEBUG - Found requirements: {bulunan_ihtiyac}, Found items: {bulunan_kalem}")
+        # print(f"DEBUG - Final tarih: {en_gec_tarih}")
+        
+        # Eğer hiç malzeme verisi bulunamadıysa sipariş durumuna göre default tarih ver
+        if bulunan_ihtiyac == 0:
+            # print("DEBUG - No material requirements found, using default date")
+            if self.siparis_kalemi.siparis.durum == 'malzeme_planlandi':
+                return timezone.now().date() + timedelta(days=7)
+            else:
+                return timezone.now().date() + timedelta(days=14)
+                
+        return en_gec_tarih
+    
+    def hesapla_bagimlillik_hazir_tarihi(self):
+        """Bağımlı operasyonların tamamlanma tarihini hesaplar"""
+        # Bu operasyondan önce tamamlanması gereken operasyonları bul
+        if not self.operasyon or not self.siparis_kalemi:
+            return None
+            
+        onceki_operasyonlar = IsEmri.objects.filter(
+            siparis_kalemi=self.siparis_kalemi,
+            operasyon__sira_no__lt=self.operasyon.sira_no,
+            planlanan_istasyon__isnull=False  # Sadece planlanmış olanları dikkate al
+        ).exclude(id=self.id)
+        
+        hazir_tarihleri = []
+        
+        for onceki_emir in onceki_operasyonlar:
+            if onceki_emir.durum in ['tamamlandi']:
+                continue  # Zaten tamamlanmış
+            
+            # Planlanan bitiş tarihi varsa onu kullan
+            if onceki_emir.planlanan_bitis_tarihi:
+                hazir_tarihleri.append(onceki_emir.planlanan_bitis_tarihi)
+            else:
+                # Yoksa bu operasyonun süresi + başlangıç tarihi
+                if onceki_emir.planlanan_baslangic_tarihi and onceki_emir.planlanan_sure:
+                    from datetime import timedelta
+                    bitis = onceki_emir.planlanan_baslangic_tarihi + timedelta(
+                        minutes=float(onceki_emir.planlanan_sure or 0)
+                    )
+                    hazir_tarihleri.append(bitis)
+        
+        return max(hazir_tarihleri) if hazir_tarihleri else None
+    
+    def hesapla_ara_urun_hazir_tarihi(self):
+        """Ara ürün bağımlılığı varsa onun hazır olma tarihini hesaplar"""
+        # Bu operasyonun ürettiği ürün başka bir operasyonun girdisi ise
+        # o operasyonun tamamlanma tarihini bekle
+        
+        # BOM'da bu ürünü kullanan başka ürünler var mı?
+        if self.urun.kategori != 'ara_urun':
+            return None
+        
+        # Bu ara ürünü üreten önceki iş emirlerini bul
+        ara_urun_emirleri = IsEmri.objects.filter(
+            urun=self.urun,
+            durum__in=['planlandi', 'malzeme_bekliyor', 'hazir', 'basladi']
+        ).exclude(id=self.id)
+        
+        if not ara_urun_emirleri.exists():
+            return None
+        
+        # En erken tamamlanacak ara ürün emrinin tarihini al
+        hazir_tarihleri = []
+        for emir in ara_urun_emirleri:
+            if emir.planlanan_bitis_tarihi:
+                hazir_tarihleri.append(emir.planlanan_bitis_tarihi)
+        
+        return min(hazir_tarihleri) if hazir_tarihleri else None
+    
+    @property
+    def uretim_hazir_tarihi(self):
+        """Template'lerde kullanılmak üzere property"""
+        return self.hesapla_uretim_hazir_tarihi()
+    
+    @property 
+    def hazirlik_durumu(self):
+        """Hazırlık durumunu belirle"""
+        from datetime import timedelta
+        try:
+            hazir_tarihi = self.hesapla_uretim_hazir_tarihi()
+            bugun = timezone.now().date()
+            
+            if hazir_tarihi <= bugun:
+                return 'hazir'
+            elif hazir_tarihi <= bugun + timedelta(days=3):
+                return 'yaklasyor'
+            else:
+                return 'bekliyor'
+        except:
+            return 'bilinmiyor'
         
     @property
     def gercek_bitis(self):

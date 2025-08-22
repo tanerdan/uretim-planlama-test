@@ -76,7 +76,7 @@ http://127.0.0.1:8000/admin/
 - **Otomatik sipariş kapatma**: Tüm kalemler tamamlandığında
 - **Raporlama sistemi**: Dashboard, performans analizi, Excel export
 
-### 5. Üretim Modülü ⭐⭐ (YENİ - 21 Ağustos 2025)
+### 5. Üretim Modülü ⭐⭐ (21 Ağustos 2025)
 - **İş İstasyonları**: Makine ve istasyon tanımları
 - **Standart İş Adımları**: Operasyon template'leri
 - **İş Akışları**: Ürün bazlı üretim süreç tanımları
@@ -86,21 +86,32 @@ http://127.0.0.1:8000/admin/
 - **Operasyon-Malzeme Eşleştirmesi**: Her operasyona özel malzeme ataması
 - **Bağımlılık Yönetimi**: Operasyonlar arası otomatik bağımlılık kurma
 
-### 6. Durum Takibi ve Otomasyonlar
+### 6. Üretim Planlama Gantt Sistemi ⭐⭐ (22 Ağustos 2025) - YENİ
+- **Drag&Drop Planlama**: İş emirlerini istasyon ve tarihlere sürükle-bırak
+- **Görsel Kapasite Takibi**: Her gün ve istasyon için kapasite göstergeleri
+- **İstasyon+Gün Bazlı Mesai**: Her hücre için özel çalışma saati ayarlama
+- **Kapasite Aşımı Yönetimi**: Sonraki güne otomatik taşıma seçeneği
+- **Türkçe Decimal Format**: 6,0h gibi Türkçe ondalık sayı desteği
+- **Unplan İşlemi**: Planlanmış işleri geri planlanmamış listeye taşıma
+- **Malzeme Hazır Tarihi Kontrolü**: Malzeme gelişine göre planlama kısıtı
+- **Gerçek Zamanlı Kapasite Hesaplama**: Çalışma saati değişikliklerinde anlık güncelleme
+
+### 7. Durum Takibi ve Otomasyonlar
 - **Sipariş Durumları**: `beklemede` → `malzeme_planlandi` → `is_emirleri_olusturuldu` → `uretimde` → `tamamlandi`
 - **Malzeme İhtiyaç Durumları**: `beklemede` → `siparis_verildi` → `kismi_geldi` → `tamamlandi`
 - **İş Emri Durumları**: `planlandi` → `malzeme_bekliyor` → `hazir` → `basladi` → `tamamlandi`
 - **Otomatik Durum Güncellemeleri**: İş emri oluşturulduğunda sipariş durumu otomatik güncellenir
 
-### 7. Görsel Malzeme Takibi ⭐ (YENİ)
+### 8. Görsel Malzeme Takibi ⭐ (21 Ağustos 2025)
 - **Malzeme Kullanım İşaretleme**: Drop edilen malzemeler sol panelde görsel olarak işaretlenir
 - **Kullanıldı Badge'leri**: Yeşil ✓ işareti ile kullanılan malzemeler
 - **Şeffaflık ve Filtreler**: Kullanılan malzemeler %50 şeffaf + gri filtre
 - **Hover Efektleri**: Animasyonlu geçişler ve büyütme efektleri
 - **Otomatik Temizleme**: Canvas temizlendiğinde malzeme durumları sıfırlanır
 
-### 8. Admin Panel Özelleştirmeleri
+### 9. Admin Panel Özelleştirmeleri
 - **Görsel İş Akışı Editörü**: Custom template ile drag&drop arayüz
+- **Üretim Planlama Gantt**: Tam özellikli drag&drop planlama arayüzü
 - **AJAX Workflow Kaydetme**: Gerçek zamanlı workflow kaydetme
 - **Smart Form Filtering**: İş emri formlarında akıllı filtreleme
 - **Hover BOM görüntüleme**: Ürün listesinde reçete detayları
@@ -130,7 +141,7 @@ http://127.0.0.1:8000/admin/
 ### Malzeme Geliş Modülü (13)
 13. **MalzemeGelis** - Malzeme teslim alımları
 
-### Üretim Modülü (14-19) ⭐ YENİ
+### Üretim Modülü (14-19) ⭐ 
 14. **IsIstasyonu** - İş istasyonları ve makineler
 15. **StandardIsAdimi** - Standart operasyon template'leri
 16. **IsAkisi** - Ürün bazlı iş akışları
@@ -138,7 +149,11 @@ http://127.0.0.1:8000/admin/
 18. **IsEmri** - Üretim iş emirleri
 19. **IsEmriOperasyonDurum** - İş emri operasyon durum takibi
 
-## 🎨 Görsel İş Akışı Tasarımı (YENİ) ⭐⭐
+### Üretim Planlama Modülü (20-21) ⭐⭐ YENİ
+20. **UretimPlanlama** (Proxy) - Üretim planlama arayüzü
+21. **IsEmriPlanlama** - İş emri planlama detayları
+
+## 🎨 Görsel İş Akışı Tasarımı ⭐⭐
 
 ### Özellikler
 - **Drag & Drop Arayüzü**: Sol panelden canvas'a sürükle-bırak
@@ -157,6 +172,28 @@ http://127.0.0.1:8000/admin/
 5. **Kaydetme** → Workflow ve malzeme atamaları kaydedilir
 6. **İş Emri Oluşturma** → Siparişlerden bu workflow kullanılarak iş emri oluştur
 
+## 🗓️ Üretim Planlama Gantt Sistemi ⭐⭐ (22 Ağustos 2025)
+
+### Ana Özellikler
+- **Gantt Chart Görünümü**: İstasyonlar x günler matrisi
+- **Drag&Drop Planlama**: İş emirlerini sol panelden sürükle-bırak
+- **Dinamik Kapasite Hesaplama**: Her hücre için gerçek zamanlı kapasite takibi
+- **Çalışma Saati Yönetimi**: İstasyon+gün bazında özel mesai ayarlama
+- **Malzeme Hazır Tarihi Kontrolü**: Malzeme gelişine göre planlama kısıtı
+
+### Teknik Özellikler
+- **Türkçe Decimal Format**: "6,0h" formatında süre desteği
+- **Kapasite Aşımı Yönetimi**: Sonraki güne otomatik taşıma seçeneği
+- **Unplan İşlevi**: Planlanmış işleri geri alma
+- **Gerçek Zamanlı Validasyon**: Sürüklerken anlık geri bildirim
+- **AJAX Kaydetme**: Veritabanına otomatik kayıt
+
+### Validasyon Kuralları
+1. **Çalışma Saati Kontrolü**: 0 saatlik günlere planlama yapılamaz
+2. **Kapasite Kontrolü**: Günlük kapasiteyi aşan işler için uyarı
+3. **Malzeme Hazır Tarihi**: Malzemeler gelişinden önce planlama yapılamaz
+4. **Overflow Handling**: Taşan süreler için sonraki güne taşıma seçeneği
+
 ## 💡 Önemli Teknik Notlar
 
 ### Yeni Üretim Algoritmaları
@@ -164,6 +201,12 @@ http://127.0.0.1:8000/admin/
 - **Akıllı Bağımlılık Kurma**: İş akışındaki operasyon sırası + ara ürün bağımlılıkları otomatik kurulur
 - **Operasyon-Malzeme Mapping**: Her operasyona özel malzeme gereklilikleri JSON field'da saklanır
 - **Görsel Malzeme Takibi**: JavaScript ile malzeme kullanım durumu görsel olarak takip edilir
+
+### Üretim Planlama Algoritmaları
+- **Kapasite Optimizasyonu**: Günlük kapasite limitlerine göre otomatik planlama
+- **Bağımlılık Analizi**: İş emirleri arası bağımlılıkları dikkate alan planlama
+- **Malzeme Hazır Tarihi Entegrasyonu**: Satın alma modülü ile entegre planlama
+- **Overflow Management**: Kapasite aşımında sonraki günlere akıllı dağıtım
 
 ### MRP Algoritması
 - `calculate_materials()` fonksiyonu recursive BOM çözümü yapar
@@ -173,6 +216,7 @@ http://127.0.0.1:8000/admin/
 
 ### Admin Özelleştirmeleri
 - **Görsel İş Akışı Editörü**: Custom template ile drag&drop arayüz
+- **Üretim Planlama Gantt**: Tam özellikli drag&drop planlama arayüzü
 - **AJAX Workflow Kaydetme**: Gerçek zamanlı workflow kaydetme
 - **Smart Form Filtering**: İş emri formlarında akıllı filtreleme
 - **Custom Templates**: Zengin kullanıcı deneyimi için özel template'ler
@@ -231,6 +275,7 @@ python manage.py collectstatic
 - Gerçek zamanlı stok takibi eksik (üretim sürecinde güncellenecek)
 - ~~Üretim modülü henüz geliştirilmedi~~ → **✅ Üretim modülü tamamlandı**
 - ~~Malzeme-operasyon eşleştirme manuel~~ → **✅ Görsel eşleştirme sistemi eklendi**
+- ~~Üretim planlama sistemi yok~~ → **✅ Gantt bazlı drag&drop planlama sistemi eklendi**
 
 ## 📋 Gelecek Özellikler (Roadmap)
 1. **Üretim Takip Sistemi**: Gerçek zamanlı üretim durumu takibi

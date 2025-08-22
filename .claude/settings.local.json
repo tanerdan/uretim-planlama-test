@@ -8,10 +8,13 @@
       "Bash(venv/Scripts/activate:*)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)"
     ],
     "additionalDirectories": [
-      "D:\\Documents_D\\SoftwareDevelopment"
+      "D:\\Documents_D\\SoftwareDevelopment",
+      "D:\\d D:\\Documents_D\\SoftwareDevelopment"
     ]
   }
 }

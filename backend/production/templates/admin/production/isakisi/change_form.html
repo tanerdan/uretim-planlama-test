@@ -1,0 +1,37 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block submit_buttons_bottom %}
+    {{ block.super }}
+    
+    {% if original and gorsel_tasarim_url %}
+    <div style="margin: 10px 0; padding-top: 10px; border-top: 1px solid #ddd;">
+        <a href="{{ gorsel_tasarim_url }}" class="btn btn-success" style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">
+            <i class="fas fa-project-diagram"></i> Görsel İş Akışı Tasarımı
+        </a>
+        <p style="color: #666; font-size: 13px; margin-top: 5px;">
+            💡 Drag&drop editörü ile operasyonları görsel olarak düzenleyebilirsiniz.
+        </p>
+    </div>
+    {% endif %}
+{% endblock %}
+
+<style>
+.btn {
+    display: inline-block;
+    font-weight: 400;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    transition: all 0.15s ease-in-out;
+    text-decoration: none;
+}
+
+.btn:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>

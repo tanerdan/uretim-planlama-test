@@ -1,0 +1,520 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .planning-container {
+        display: flex;
+        gap: 20px;
+        padding: 20px 0;
+        min-height: 80vh;
+    }
+    
+    .planning-section {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    
+    .workstations-section {
+        flex: 2;
+    }
+    
+    .unplanned-section {
+        flex: 1;
+        max-width: 400px;
+    }
+    
+    .section-header {
+        background: #007cba;
+        color: white;
+        padding: 10px 15px;
+        margin: -15px -15px 15px -15px;
+        border-radius: 8px 8px 0 0;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .view-controls {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .view-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .view-btn:hover, .view-btn.active {
+        background: rgba(255,255,255,0.3);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    .workstation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 15px;
+    }
+    
+    .workstation-box {
+        background: white;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        min-height: 200px;
+        transition: all 0.3s;
+        cursor: grab;
+    }
+    
+    .workstation-box:active {
+        cursor: grabbing;
+    }
+    
+    .workstation-box.dragging {
+        opacity: 0.5;
+        transform: rotate(5deg);
+    }
+    
+    .workstation-box:hover {
+        border-color: #007cba;
+        box-shadow: 0 4px 8px rgba(0,124,186,0.1);
+    }
+    
+    .workstation-header {
+        background: #e9ecef;
+        padding: 8px 12px;
+        margin: -10px -10px 10px -10px;
+        border-radius: 6px 6px 0 0;
+        font-weight: bold;
+        color: #495057;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .workstation-capacity {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    
+    .work-order-chip {
+        background: linear-gradient(135deg, #007cba, #0056b3);
+        color: white;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        cursor: move;
+        transition: all 0.2s;
+        font-size: 13px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .work-order-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .work-order-chip.status-malzeme_bekliyor {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+    }
+    
+    .work-order-chip.status-hazir {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+    }
+    
+    .work-order-chip.status-basladi {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+    }
+    
+    .work-order-chip.status-tamamlandi {
+        background: linear-gradient(135deg, #6c757d, #545b62);
+        opacity: 0.7;
+    }
+    
+    .chip-header {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+    
+    .chip-details {
+        font-size: 11px;
+        opacity: 0.9;
+        line-height: 1.3;
+    }
+    
+    .unplanned-orders {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .order-group {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+    
+    .order-group-header {
+        background: #f1f3f4;
+        padding: 8px 12px;
+        font-weight: bold;
+        color: #495057;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .order-group-content {
+        padding: 10px;
+    }
+    
+    .dropzone {
+        min-height: 40px;
+        border: 2px dashed #dee2e6;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-style: italic;
+        margin-top: 10px;
+        transition: all 0.2s;
+    }
+    
+    .dropzone.drag-over {
+        border-color: #007cba;
+        background: rgba(0,124,186,0.05);
+        color: #007cba;
+    }
+    
+    .ready-date {
+        background: rgba(255,255,255,0.2);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-top: 2px;
+        display: inline-block;
+    }
+    
+    .ready-date.future {
+        background: rgba(255,193,7,0.3);
+    }
+    
+    .ready-date.ready {
+        background: rgba(40,167,69,0.3);
+    }
+    
+    .ready-date.overdue {
+        background: rgba(220,53,69,0.3);
+    }
+    
+    /* Hazırlık durumu renkleri */
+    .work-order-chip.ready-hazir {
+        border-left: 4px solid #28a745;
+    }
+    
+    .work-order-chip.ready-yaklasyor {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .work-order-chip.ready-bekliyor {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .ready-date.ready-hazir {
+        background: rgba(40,167,69,0.3);
+        color: #155724;
+    }
+    
+    .ready-date.ready-yaklasyor {
+        background: rgba(255,193,7,0.3);
+        color: #856404;
+    }
+    
+    .ready-date.ready-bekliyor {
+        background: rgba(220,53,69,0.3);
+        color: #721c24;
+    }
+    
+    .ready-details {
+        font-size: 9px;
+        opacity: 0.8;
+        margin-top: 3px;
+        line-height: 1.2;
+        color: rgba(255,255,255,0.9);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="planning-container">
+        <!-- İş İstasyonları Bölümü -->
+        <div class="planning-section workstations-section">
+            <div class="section-header">
+                <span>İş İstasyonları</span>
+                <div class="view-controls">
+                    <button class="view-btn active" data-view="daily">Günlük</button>
+                    <button class="view-btn" data-view="weekly">Haftalık</button>
+                    <button class="view-btn" data-view="monthly">Aylık</button>
+                    <button class="view-btn" data-view="yearly">Yıllık</button>
+                </div>
+            </div>
+            
+            <div class="workstation-grid">
+                {% for istasyon in istasyonlar %}
+                <div class="workstation-box" data-station-id="{{ istasyon.id }}" draggable="true">
+                    <div class="workstation-header">
+                        <span>{{ istasyon.ad }}</span>
+                        <span class="workstation-capacity">{{ istasyon.kapasite|default:"∞" }}</span>
+                    </div>
+                    
+                    <!-- Bu istasyonda planlanmış iş emirleri -->
+                    {% for emir in istasyon_emirleri|default_if_none:"" %}
+                        {% if emir.planlanan_istasyon.id == istasyon.id %}
+                        <div class="work-order-chip status-{{ emir.durum }}" data-order-id="{{ emir.id }}" style="{% if emir.operasyon.standart_adim.renk %}background: linear-gradient(135deg, {{ emir.operasyon.standart_adim.renk }}, {{ emir.operasyon.standart_adim.renk }}cc);{% elif 'montaj' in emir.operasyon.operasyon_adi|lower %}background: linear-gradient(135deg, #28a745, #1e7e34);{% elif 'kurutma' in emir.operasyon.operasyon_adi|lower %}background: linear-gradient(135deg, #ffc107, #e0a800);{% elif 'test' in emir.operasyon.operasyon_adi|lower %}background: linear-gradient(135deg, #dc3545, #bd2130);{% else %}background: linear-gradient(135deg, #007cba, #0056b3);{% endif %}">
+                            <div class="chip-header">{{ emir.urun.ad }}</div>
+                            <div class="chip-details">
+                                {% if emir.siparis_kalemi and emir.siparis_kalemi.siparis %}
+                                Sipariş: {{ emir.siparis_kalemi.siparis.siparis_no }}<br>
+                                {% else %}
+                                Sipariş: Belirtilmemiş<br>
+                                {% endif %}
+                                İş Adımı: {% if emir.operasyon.standart_adim %}{{ emir.operasyon.standart_adim.ad }}{% else %}{{ emir.operasyon.operasyon_adi }}{% endif %}<br>
+                                Miktar: {{ emir.planlanan_miktar }} {{ emir.urun.birim }}
+                                {% if emir.planlanan_baslangic_tarihi %}
+                                <div class="ready-date">📅 {{ emir.planlanan_baslangic_tarihi|date:"d.m.Y H:i" }}</div>
+                                {% endif %}
+                                <div class="ready-date ready-{{ emir.hazirlik_durumu }}">
+                                    {% if emir.hazirlik_durumu == 'hazir' %}
+                                        ✅ Hazır ({{ emir.hesapla_uretim_hazir_tarihi|date:"d.m.Y" }})
+                                    {% elif emir.hazirlik_durumu == 'yaklasyor' %}
+                                        ⚠️ Yakında ({{ emir.hesapla_uretim_hazir_tarihi|date:"d.m.Y" }})
+                                    {% else %}
+                                        ⏳ Bekliyor ({{ emir.hesapla_uretim_hazir_tarihi|date:"d.m.Y" }})
+                                    {% endif %}
+                                </div>
+                                <div class="ready-details">
+                                    🧱 Malzeme: {{ emir.hesapla_malzeme_hazir_tarihi|date:"d.m.Y" }}<br>
+                                    {% if emir.hesapla_bagimlillik_hazir_tarihi %}
+                                    🔗 Bağımlılık: {{ emir.hesapla_bagimlillik_hazir_tarihi|date:"d.m.Y" }}
+                                    {% else %}
+                                    🔗 Bağımlılık: N/A
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Drop zone -->
+                    <div class="dropzone" data-station-id="{{ istasyon.id }}">
+                        İş emrini buraya sürükleyin
+                    </div>
+                </div>
+                {% empty %}
+                <p>Henüz aktif iş istasyonu bulunmamaktadır.</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Planlanmamış İş Emirleri Bölümü -->
+        <div class="planning-section unplanned-section">
+            <div class="section-header">
+                <span>Planlanmamış İş Emirleri</span>
+            </div>
+            
+            <div class="unplanned-orders">
+                {% for siparis_no, emirler in siparis_emirleri.items %}
+                <div class="order-group">
+                    <div class="order-group-header">
+                        Sipariş: {{ siparis_no }}
+                    </div>
+                    <div class="order-group-content">
+                        {% for emir in emirler %}
+                        <div class="work-order-chip status-{{ emir.durum }} ready-{{ emir.hazirlik_durumu }}" data-order-id="{{ emir.id }}" draggable="true" style="{% if emir.operasyon.standart_adim.renk %}background: linear-gradient(135deg, {{ emir.operasyon.standart_adim.renk }}, {{ emir.operasyon.standart_adim.renk }}cc);{% elif 'montaj' in emir.operasyon.operasyon_adi|lower %}background: linear-gradient(135deg, #28a745, #1e7e34);{% elif 'kurutma' in emir.operasyon.operasyon_adi|lower %}background: linear-gradient(135deg, #ffc107, #e0a800);{% elif 'test' in emir.operasyon.operasyon_adi|lower %}background: linear-gradient(135deg, #dc3545, #bd2130);{% else %}background: linear-gradient(135deg, #007cba, #0056b3);{% endif %}">
+                            <div class="chip-header">{{ emir.urun.ad }}</div>
+                            <div class="chip-details">
+                                İş Adımı: {% if emir.operasyon.standart_adim %}{{ emir.operasyon.standart_adim.ad }}{% else %}{{ emir.operasyon.operasyon_adi }}{% endif %}<br>
+                                Miktar: {{ emir.planlanan_miktar }} {{ emir.urun.birim }}<br>
+                                {% if emir.siparis_kalemi and emir.siparis_kalemi.siparis and emir.siparis_kalemi.siparis.musteri %}
+                                Müşteri: {{ emir.siparis_kalemi.siparis.musteri.ad }}
+                                {% else %}
+                                Müşteri: Belirtilmemiş
+                                {% endif %}
+                                <div class="ready-date ready-{{ emir.hazirlik_durumu }}">
+                                    {% if emir.hazirlik_durumu == 'hazir' %}
+                                        ✅ Hazır ({{ emir.hesapla_uretim_hazir_tarihi|date:"d.m.Y" }})
+                                    {% elif emir.hazirlik_durumu == 'yaklasyor' %}
+                                        ⚠️ Yakında ({{ emir.hesapla_uretim_hazir_tarihi|date:"d.m.Y" }})
+                                    {% else %}
+                                        ⏳ Bekliyor ({{ emir.hesapla_uretim_hazir_tarihi|date:"d.m.Y" }})
+                                    {% endif %}
+                                </div>
+                                <div class="ready-details">
+                                    🧱 Malzeme: {{ emir.hesapla_malzeme_hazir_tarihi|date:"d.m.Y" }}<br>
+                                    {% if emir.hesapla_bagimlillik_hazir_tarihi %}
+                                    🔗 Bağımlılık: {{ emir.hesapla_bagimlillik_hazir_tarihi|date:"d.m.Y" }}
+                                    {% else %}
+                                    🔗 Bağımlılık: N/A
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% empty %}
+                <p>Planlanmamış iş emri bulunmamaktadır.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Görünüm değiştirme
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // TODO: Görünüm değiştirme logic'i
+            console.log('Görünüm değiştirildi:', this.dataset.view);
+        });
+    });
+    
+    // Drag & Drop functionality
+    let draggedElement = null;
+    let draggedWorkstation = null;
+    
+    // İş istasyonları drag & drop
+    document.querySelectorAll('.workstation-box[draggable="true"]').forEach(box => {
+        box.addEventListener('dragstart', function(e) {
+            draggedWorkstation = this;
+            this.classList.add('dragging');
+        });
+        
+        box.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            draggedWorkstation = null;
+        });
+        
+        box.addEventListener('dragover', function(e) {
+            if (draggedWorkstation && draggedWorkstation !== this) {
+                e.preventDefault();
+            }
+        });
+        
+        box.addEventListener('drop', function(e) {
+            if (draggedWorkstation && draggedWorkstation !== this) {
+                e.preventDefault();
+                // İki istasyonun yerini değiştir
+                const grid = this.parentNode;
+                const draggedIndex = Array.from(grid.children).indexOf(draggedWorkstation);
+                const targetIndex = Array.from(grid.children).indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    grid.insertBefore(draggedWorkstation, this.nextSibling);
+                } else {
+                    grid.insertBefore(draggedWorkstation, this);
+                }
+            }
+        });
+    });
+    
+    // İş emirleri drag & drop
+    document.querySelectorAll('.work-order-chip[draggable="true"]').forEach(chip => {
+        chip.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            this.style.opacity = '0.5';
+        });
+        
+        chip.addEventListener('dragend', function(e) {
+            this.style.opacity = '';
+            draggedElement = null;
+        });
+    });
+    
+    // Drop zone'lar
+    document.querySelectorAll('.dropzone').forEach(zone => {
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        
+        zone.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+        });
+        
+        zone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            if (draggedElement) {
+                const emirId = draggedElement.dataset.orderId;
+                const istasyonId = this.dataset.stationId;
+                
+                // İş emrini güncelle
+                updateWorkOrder(emirId, istasyonId);
+                
+                // Element'i yeni konuma taşı
+                this.parentNode.insertBefore(draggedElement.cloneNode(true), this);
+                draggedElement.remove();
+            }
+        });
+    });
+    
+    // İş emri güncelleme fonksiyonu
+    function updateWorkOrder(emirId, istasyonId) {
+        console.log('updateWorkOrder çağrıldı:', emirId, istasyonId);
+        
+        const formData = new FormData();
+        formData.append('emir_id', emirId);
+        formData.append('istasyon_id', istasyonId);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        console.log('FormData hazırlandı, fetch başlıyor...');
+        
+        fetch('{% url "admin:production_uretimplanlama_emir_guncelle" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response alındı:', response.status, response.statusText);
+            return response.json();
+        })
+        .then(data => {
+            console.log('JSON parse edildi:', data);
+            if (data.success) {
+                console.log('İş emri güncellendi');
+                // Başarılı güncellemede sayfayı yenile
+                location.reload();
+            } else {
+                console.error('Hata:', data.error);
+                alert('İş emri güncellenirken hata oluştu: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+            alert('Bağlantı hatası oluştu: ' + error.message);
+        });
+    }
+});
+</script>
+
+<!-- CSRF Token -->
+{% csrf_token %}
+{% endblock %}

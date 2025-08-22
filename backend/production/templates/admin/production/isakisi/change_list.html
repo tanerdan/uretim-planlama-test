@@ -4,12 +4,12 @@
 {% block content_title %}
     <h1>İş Akışları</h1>
     <div style="margin: 10px 0;">
-        <a href="{% url 'admin:production_isakisi_gorsel_tasarim' %}" class="btn btn-success" style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">
-            <i class="fas fa-project-diagram"></i> Görsel İş Akışı Tasarımı
-        </a>
         <a href="{% url 'admin:production_isakisi_add' %}" class="btn btn-primary" style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">
-            <i class="fas fa-plus"></i> Geleneksel Ekleme
+            <i class="fas fa-plus"></i> İş Akışı Ekle
         </a>
+        <p style="color: #666; font-size: 14px; margin-top: 10px;">
+            💡 <strong>İpucu:</strong> İş akışı oluşturduktan sonra, detay sayfasında "Görsel Tasarım" butonunu kullanarak drag&drop editörüne erişebilirsiniz.
+        </p>
     </div>
 {% endblock %}
 
