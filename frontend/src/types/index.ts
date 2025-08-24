@@ -57,6 +57,18 @@ export interface Siparis {
   dosyalar?: SiparisDosya[];
 }
 
+// API submission için ayrı tip - kalemler JSON string olarak gönderiliyor
+export interface SiparisApiPayload {
+  siparis_no: string;
+  musteri: number;
+  tarih: string;
+  durum?: 'beklemede' | 'malzeme_planlandi' | 'is_emirleri_olusturuldu' | 'uretimde' | 'tamamlandi' | 'iptal';
+  musteri_ulke: string;
+  son_kullanici_ulke: string;
+  notlar: string;
+  kalemler: string; // JSON string
+}
+
 export interface SiparisKalem {
   id: number;
   siparis: number;

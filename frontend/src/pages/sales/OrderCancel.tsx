@@ -121,7 +121,7 @@ const OrderCancel: React.FC = () => {
       title: 'İşlemler',
       key: 'actions',
       width: 120,
-      render: (_, record: Siparis) => (
+      render: (_: any, record: Siparis) => (
         <Space size="small">
           <Tooltip title="Detay Görüntüle">
             <Button 

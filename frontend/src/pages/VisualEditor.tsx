@@ -94,7 +94,7 @@ const VisualEditor: React.FC = () => {
       container: editorRef.current,
       plugins: [webpage],
       pluginsOpts: {
-        [webpage as string]: {
+        [(webpage as unknown) as string]: {
           blocks: ['link-block', 'quote', 'text-basic'],
         }
       },

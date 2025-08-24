@@ -139,7 +139,7 @@ const OrderChanges: React.FC = () => {
       title: 'İşlemler',
       key: 'actions',
       width: 100,
-      render: (_, record: Siparis) => (
+      render: (_: any, record: Siparis) => (
         <Space size="small">
           <Tooltip title="Siparişi Düzenle">
             <Button 

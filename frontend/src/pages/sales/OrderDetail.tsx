@@ -130,7 +130,7 @@ const OrderDetail: React.FC = () => {
       key: 'toplam_usd',
       width: 100,
       align: 'right' as const,
-      render: (_, record: SiparisKalem) => {
+      render: (_: any, record: SiparisKalem) => {
         const miktar = parseFloat(record.miktar as any) || 0;
         const fiyat = parseFloat(record.birim_fiyat_usd as any) || 0;
         const total = miktar * fiyat;

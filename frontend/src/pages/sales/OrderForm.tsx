@@ -28,7 +28,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesService } from '../../services/salesService';
-import { Musteri, Urun, Siparis, SiparisKalem, Ulke } from '../../types';
+import { Musteri, Urun, Siparis, SiparisKalem, SiparisApiPayload, Ulke } from '../../types';
 import dayjs from 'dayjs';
 import styled from 'styled-components';
 
@@ -383,7 +383,7 @@ const OrderForm: React.FC = () => {
     }
     
     // JSON formatında veri hazırla
-    const orderData = {
+    const orderData: SiparisApiPayload = {
       siparis_no: values.siparis_no,
       musteri: values.musteri,
       tarih: values.tarih.format('YYYY-MM-DD'),
@@ -405,10 +405,10 @@ const OrderForm: React.FC = () => {
     };
 
     if (isEdit && id) {
-      updateMutation.mutate({ id: Number(id), data: orderData });
+      updateMutation.mutate({ id: Number(id), data: orderData as any });
     } else {
       // Yeni sipariş oluştur
-      createMutation.mutate(orderData);
+      createMutation.mutate(orderData as any);
     }
   };
 
