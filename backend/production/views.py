@@ -9,7 +9,13 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 import logging
-import pyodbc
+try:
+    import pyodbc
+    PYODBC_AVAILABLE = True
+except ImportError:
+    # pyodbc not available (production environment)
+    pyodbc = None
+    PYODBC_AVAILABLE = False
 from datetime import datetime
 from decimal import Decimal
 from django.conf import settings
@@ -90,6 +96,10 @@ class MusteriViewSet(viewsets.ModelViewSet):
     
     def _test_mikro_fly_connection(self):
         """Mikro Fly veritabanı bağlantısını test et"""
+        if not PYODBC_AVAILABLE:
+            logging.warning("pyodbc not available - skipping MikroFly connection test")
+            return False
+            
         try:
             conn_str = self._get_mikro_fly_connection_string()
             with pyodbc.connect(conn_str, timeout=5) as conn:
