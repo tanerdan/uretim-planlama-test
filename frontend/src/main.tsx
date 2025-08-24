@@ -11,6 +11,7 @@ import OrderList from './pages/sales/OrderList.tsx';
 import OrderForm from './pages/sales/OrderForm.tsx';
 import OrderDetail from './pages/sales/OrderDetail.tsx';
 import OrderChanges from './pages/sales/OrderChanges.tsx';
+import OrderCancel from './pages/sales/OrderCancel.tsx';
 import './index.css';
 
 // Placeholder components
@@ -33,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="sales/orders/new" element={<OrderForm />} />
           <Route path="sales/orders/:id/edit" element={<OrderForm />} />
           <Route path="sales/orders/changes" element={<OrderChanges />} />
+          <Route path="sales/orders/cancel" element={<OrderCancel />} />
           <Route path="sales/customers" element={<CustomerList />} />
           <Route path="sales/customers/new" element={<CustomerList />} />
           <Route path="sales/reports" element={<SalesReports />} />

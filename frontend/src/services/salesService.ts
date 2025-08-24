@@ -90,11 +90,12 @@ export const salesService = {
     }
   },
 
-  deleteOrder: async (id: number): Promise<void> => {
+  updateOrderStatus: async (id: number, status: string): Promise<Siparis> => {
     try {
-      await api.delete(`/siparisler/${id}/`);
+      const response = await api.patch<Siparis>(`/siparisler/${id}/`, { durum: status });
+      return response.data;
     } catch (error) {
-      console.error('Delete order error:', error);
+      console.error('Update order status error:', error);
       throw error;
     }
   },

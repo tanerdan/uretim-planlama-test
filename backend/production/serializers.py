@@ -55,7 +55,7 @@ class SiparisSerializer(serializers.ModelSerializer):
         model = Siparis
         fields = [
             'id', 'siparis_no', 'musteri', 'musteri_adi', 'tarih', 
-            'durum', 'musteri_ulke', 
+            'durum', 'musteri_ulke', 'son_kullanici_ulke',
             'notlar', 'siparis_mektubu', 'maliyet_hesabi', 'dosya', 
             'kalemler', 'dosyalar', 'toplam_tutar', 
             'olusturulma_tarihi', 'guncellenme_tarihi'
@@ -66,7 +66,7 @@ class SiparisCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Siparis
-        fields = ['id', 'siparis_no', 'musteri', 'tarih', 'durum', 'musteri_ulke', 'notlar', 'siparis_mektubu', 'maliyet_hesabi', 'dosya', 'kalemler']
+        fields = ['id', 'siparis_no', 'musteri', 'tarih', 'durum', 'musteri_ulke', 'son_kullanici_ulke', 'notlar', 'siparis_mektubu', 'maliyet_hesabi', 'dosya', 'kalemler']
     
     def create(self, validated_data):
         import json
@@ -90,3 +90,34 @@ class SiparisCreateSerializer(serializers.ModelSerializer):
             SiparisKalem.objects.create(siparis=siparis, **kalem_data)
         
         return siparis
+
+    def update(self, instance, validated_data):
+        import json
+        
+        # Kalemler JSON string olarak geliyor, parse et
+        kalemler_json = validated_data.pop('kalemler', None)
+        if kalemler_json:
+            if isinstance(kalemler_json, str):
+                kalemler_data = json.loads(kalemler_json)
+            else:
+                kalemler_data = kalemler_json
+            
+            # Mevcut kalemleri sil
+            instance.kalemler.all().delete()
+            
+            # Yeni kalemleri oluştur
+            for kalem_data in kalemler_data:
+                # Urun ID'sini integer'a çevir ve Urun nesnesini al
+                if 'urun' in kalem_data:
+                    from .models import Urun
+                    urun_id = int(kalem_data['urun'])
+                    kalem_data['urun'] = Urun.objects.get(id=urun_id)
+                
+                SiparisKalem.objects.create(siparis=instance, **kalem_data)
+        
+        # Sipariş bilgilerini güncelle
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        return instance

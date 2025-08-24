@@ -214,15 +214,22 @@ const OrderForm: React.FC = () => {
   // Form initialization for edit mode
   useEffect(() => {
     if (isEdit && orderData) {
+      const customerCountryValue = orderData.musteri_ulke || 'TR';
+      const endUserCountryValue = orderData.son_kullanici_ulke || customerCountryValue;
+      
       form.setFieldsValue({
         musteri: orderData.musteri,
         siparis_no: orderData.siparis_no,
         tarih: dayjs(orderData.tarih),
-        musteri_ulke: orderData.musteri_ulke || 'TR',
-        son_kullanici_ulke: orderData.son_kullanici_ulke || 'TR',
+        musteri_ulke: customerCountryValue,
+        son_kullanici_ulke: endUserCountryValue,
         aciklama: orderData.aciklama,
       });
+      
       setSelectedCustomer(orderData.musteri);
+      setCustomerCountry(customerCountryValue);
+      setEndUserCountry(endUserCountryValue);
+      
       if (orderData.kalemler) {
         setOrderItems(orderData.kalemler);
       }
@@ -364,6 +371,11 @@ const OrderForm: React.FC = () => {
     }
   };
 
+  const handleEndUserCountryChange = (country: string) => {
+    setEndUserCountry(country);
+    form.setFieldValue('son_kullanici_ulke', country);
+  };
+
   const onFinish = (values: any) => {
     // Zorunlu alan kontrolleri
     if (orderItems.length === 0) {
@@ -377,7 +389,8 @@ const OrderForm: React.FC = () => {
       musteri: values.musteri,
       tarih: values.tarih.format('YYYY-MM-DD'),
       musteri_ulke: values.musteri_ulke,
-      durum: 'beklemede',
+      son_kullanici_ulke: values.son_kullanici_ulke || values.musteri_ulke,
+      durum: isEdit ? undefined : 'beklemede',
       notlar: values.aciklama || '',
       kalemler: JSON.stringify(orderItems.map(item => ({
         urun: item.urun,
@@ -387,7 +400,7 @@ const OrderForm: React.FC = () => {
         kur: item.kur || 1,
         birim_fiyat_usd: item.birim_fiyat_usd || 0,
         teslim_tarihi: item.teslim_tarihi || dayjs().add(7, 'days').format('YYYY-MM-DD'),
-        son_kullanici_ulke: item.son_kullanici_ulke || 'TR',
+        son_kullanici_ulke: item.son_kullanici_ulke || values.son_kullanici_ulke || values.musteri_ulke || 'TR',
         notlar: item.notlar || '',
       })))
     };
@@ -531,7 +544,7 @@ const OrderForm: React.FC = () => {
       width: '9%',
       render: (value: string, record: SiparisKalem, index: number) => (
         <Select
-          value={value || endUserCountry}
+          value={record.son_kullanici_ulke || value || 'TR'}
           onChange={(val) => updateOrderItem(index, 'son_kullanici_ulke', val)}
           style={{ width: '100%' }}
           showSearch
@@ -609,6 +622,7 @@ const OrderForm: React.FC = () => {
         initialValues={{
           tarih: dayjs(),
           musteri_ulke: 'TR',
+          son_kullanici_ulke: 'TR',
         }}
       >
         <StyledCard title="Sipariş Bilgileri">
@@ -694,7 +708,29 @@ const OrderForm: React.FC = () => {
                 </Select>
               </Form.Item>
             </Col>
-            
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                name="son_kullanici_ulke"
+                label="Son Kullanıcı Ülke"
+                rules={[{ required: true, message: 'Son kullanıcı ülkesi gerekli' }]}
+              >
+                <Select
+                  placeholder="Ülke seçin"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  value={endUserCountry}
+                  onChange={handleEndUserCountryChange}
+                >
+                  {countries?.map((country: Ulke) => (
+                    <Option key={country.kod} value={country.kod}>
+                      {country.ad}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
           </Row>
           
           <Row gutter={16}>
@@ -709,8 +745,8 @@ const OrderForm: React.FC = () => {
                 <Col xs={24} sm={8}>
                   <Form.Item
                     name="siparis_mektubu"
-                    label="Sipariş Mektubu (Zorunlu)"
-                    rules={[{ required: true, message: 'Sipariş mektubu yüklenmesi zorunludur' }]}
+                    label={isEdit ? "Sipariş Mektubu (Güncelle)" : "Sipariş Mektubu (Zorunlu)"}
+                    rules={isEdit ? [] : [{ required: true, message: 'Sipariş mektubu yüklenmesi zorunludur' }]}
                   >
                     <Upload
                       name="siparis_mektubu"
@@ -723,7 +759,7 @@ const OrderForm: React.FC = () => {
                       listType="text"
                     >
                       <Button icon={<UploadOutlined />} size="small">
-                        PDF/DOC Yükle
+                        {isEdit ? 'Yeni PDF/DOC Yükle' : 'PDF/DOC Yükle'}
                       </Button>
                     </Upload>
                   </Form.Item>
@@ -732,8 +768,8 @@ const OrderForm: React.FC = () => {
                 <Col xs={24} sm={8}>
                   <Form.Item
                     name="maliyet_hesabi"
-                    label="Maliyet Hesabı (Zorunlu)"
-                    rules={[{ required: true, message: 'Maliyet hesap tablosu yüklenmesi zorunludur' }]}
+                    label={isEdit ? "Maliyet Hesabı (Güncelle)" : "Maliyet Hesabı (Zorunlu)"}
+                    rules={isEdit ? [] : [{ required: true, message: 'Maliyet hesap tablosu yüklenmesi zorunludur' }]}
                   >
                     <Upload
                       name="maliyet_hesabi"
@@ -746,7 +782,7 @@ const OrderForm: React.FC = () => {
                       listType="text"
                     >
                       <Button icon={<UploadOutlined />} size="small">
-                        Excel/PDF Yükle
+                        {isEdit ? 'Yeni Excel/PDF Yükle' : 'Excel/PDF Yükle'}
                       </Button>
                     </Upload>
                   </Form.Item>

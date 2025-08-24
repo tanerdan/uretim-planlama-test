@@ -1,0 +1,45 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: uretim-planlama-db
+    plan: free
+    region: frankfurt
+    env: python
+    buildCommand: "echo 'Database service'"
+    startCommand: "echo 'Database running'"
+    
+  # Django Backend
+  - type: web
+    name: uretim-planlama-backend
+    plan: free
+    region: frankfurt
+    env: python
+    buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "cd backend && gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: BASIC_AUTH_ENABLED
+        value: "True"
+      - key: BASIC_AUTH_USERNAME
+        value: "testuser"
+      - key: BASIC_AUTH_PASSWORD
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: uretim-planlama-db
+          property: connectionString
+
+  # React Frontend
+  - type: web
+    name: uretim-planlama-frontend
+    plan: free
+    region: frankfurt
+    env: node
+    buildCommand: "cd frontend && npm install && npm run build"
+    startCommand: "cd frontend && npm run preview -- --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: "https://uretim-planlama-backend.onrender.com"

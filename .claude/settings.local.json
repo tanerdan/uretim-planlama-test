@@ -24,7 +24,10 @@
       "Bash(python:*)",
       "Bash(del temp_response.json)",
       "Bash(grep:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(copy CLAUDE.md CLAUDE_backup_20250824.md)",
+      "Bash(copy:*)",
+      "Bash(ipconfig)"
     ],
     "additionalDirectories": [
       "D:\\Documents_D\\SoftwareDevelopment",

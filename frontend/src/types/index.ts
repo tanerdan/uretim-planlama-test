@@ -44,7 +44,7 @@ export interface Siparis {
   siparis_no: string;
   musteri: number;
   tarih: string;
-  durum: 'beklemede' | 'malzeme_planlandi' | 'is_emirleri_olusturuldu' | 'uretimde' | 'tamamlandi';
+  durum: 'beklemede' | 'malzeme_planlandi' | 'is_emirleri_olusturuldu' | 'uretimde' | 'tamamlandi' | 'iptal';
   musteri_ulke: string;
   son_kullanici_ulke: string;
   toplam_tutar: number;

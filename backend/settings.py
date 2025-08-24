@@ -16,7 +16,10 @@ SECRET_KEY = 'django-insecure-your-secret-key-here'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.118', '192.168.1.*']
+
+# Basic Auth (production ortamında aktif olacak)
+BASIC_AUTH_ENABLED = os.environ.get('BASIC_AUTH_ENABLED', 'False').lower() == 'true'
 
 # Application definition
 INSTALLED_APPS = [
@@ -37,6 +40,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'production.middleware.BasicAuthMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',  # Bu satır önemli!
     'corsheaders.middleware.CorsMiddleware',

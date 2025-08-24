@@ -14,6 +14,7 @@ import {
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import ThemeToggle from '../common/ThemeToggle';
+import MegaWorksLogo from '../../assets/MegaWorksBaslikLogo.jpeg';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -37,6 +38,12 @@ const LogoContainer = styled.div`
   gap: 12px;
 `;
 
+const LogoImage = styled.img`
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+`;
+
 const menuItems = [
   {
     key: '/',
@@ -49,45 +56,9 @@ const menuItems = [
     label: <Link to="/dashboard">Genel Dashboard</Link>,
   },
   {
-    key: 'sales-group',
+    key: '/sales',
     icon: <ShoppingCartOutlined />,
-    label: 'Satış',
-    children: [
-      {
-        key: '/sales',
-        label: <Link to="/sales">Dashboard</Link>,
-      },
-      {
-        key: 'sales-orders',
-        label: 'Siparişler',
-        children: [
-          {
-            key: '/sales/orders',
-            label: <Link to="/sales/orders">Sipariş Listesi</Link>,
-          },
-          {
-            key: '/sales/orders/new',
-            label: <Link to="/sales/orders/new">Yeni Sipariş</Link>,
-          },
-          {
-            key: '/sales/orders/changes',
-            label: <Link to="/sales/orders/changes">Sipariş Değişiklikleri</Link>,
-          },
-          {
-            key: '/sales/orders/cancel',
-            label: <Link to="/sales/orders/cancel">Sipariş İptali</Link>,
-          },
-        ],
-      },
-      {
-        key: '/sales/customers',
-        label: <Link to="/sales/customers">Müşteriler</Link>,
-      },
-      {
-        key: '/sales/reports',
-        label: <Link to="/sales/reports">Raporlar</Link>,
-      },
-    ],
+    label: <Link to="/sales">Satış</Link>,
   },
   {
     key: 'procurement-group',
@@ -182,7 +153,7 @@ const menuItems = [
   {
     key: '/reports',
     icon: <BarChartOutlined />,
-    label: <Link to="/reports">Yönetim Raporları</Link>,
+    label: <Link to="/reports">Raporlar</Link>,
   },
   {
     key: '/settings',
@@ -207,12 +178,7 @@ const MainLayout: React.FC = () => {
     const activeKeys = [path];
     
     // Ana grup anahtarlarını ekle
-    if (path.startsWith('/sales')) {
-      activeKeys.push('sales-group');
-      if (path.includes('/orders')) {
-        activeKeys.push('sales-orders');
-      }
-    } else if (path.startsWith('/procurement')) {
+    if (path.startsWith('/procurement')) {
       activeKeys.push('procurement-group');
       if (path.includes('/orders')) {
         activeKeys.push('procurement-orders');
@@ -232,12 +198,7 @@ const MainLayout: React.FC = () => {
     const path = location.pathname;
     const openKeys = [];
     
-    if (path.startsWith('/sales')) {
-      openKeys.push('sales-group');
-      if (path.includes('/orders')) {
-        openKeys.push('sales-orders');
-      }
-    } else if (path.startsWith('/procurement')) {
+    if (path.startsWith('/procurement')) {
       openKeys.push('procurement-group');
       if (path.includes('/orders')) {
         openKeys.push('procurement-orders');
@@ -302,7 +263,7 @@ const MainLayout: React.FC = () => {
       '/production/stations': 'İş İstasyonları',
       '/production/bom': 'Reçeteler (BOM)',
       '/production/reports': 'Üretim Raporları',
-      '/reports': 'Yönetim Raporları',
+      '/reports': 'Raporlar',
       '/settings': 'Ayarlar',
       '/visual-editor': 'Görsel Editör',
     };
@@ -342,8 +303,8 @@ const MainLayout: React.FC = () => {
           borderBottom: '1px solid #f0f0f0',
           justifyContent: collapsed ? 'center' : 'flex-start'
         }}>
-          <BuildOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-          {!collapsed && <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Üretim Planlama</Title>}
+          <LogoImage src={MegaWorksLogo} alt="MegaWorks Transformer" />
+          {!collapsed && <Title level={5} style={{ margin: 0, color: '#1890ff' }}>Üretim Planlama</Title>}
         </LogoContainer>
         <Menu
           theme="light"
