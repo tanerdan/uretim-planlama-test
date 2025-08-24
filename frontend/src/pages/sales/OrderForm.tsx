@@ -223,7 +223,6 @@ const OrderForm: React.FC = () => {
         tarih: dayjs(orderData.tarih),
         musteri_ulke: customerCountryValue,
         son_kullanici_ulke: endUserCountryValue,
-        aciklama: orderData.aciklama,
       });
       
       setSelectedCustomer(orderData.musteri);
@@ -293,7 +292,7 @@ const OrderForm: React.FC = () => {
           'CAD': 1.25,
           'AUD': 1.45
         };
-        newItems[index].kur = 1 / (fallbackRates[selectedCurrency] || 1);
+        newItems[index].kur = 1 / (fallbackRates[selectedCurrency as keyof typeof fallbackRates] || 1);
       }
       
       newItems[index].birim_fiyat_usd = newItems[index].birim_fiyat * newItems[index].kur;
@@ -390,7 +389,7 @@ const OrderForm: React.FC = () => {
       tarih: values.tarih.format('YYYY-MM-DD'),
       musteri_ulke: values.musteri_ulke,
       son_kullanici_ulke: values.son_kullanici_ulke || values.musteri_ulke,
-      durum: isEdit ? undefined : 'beklemede',
+      durum: isEdit ? undefined : 'beklemede' as const,
       notlar: values.aciklama || '',
       kalemler: JSON.stringify(orderItems.map(item => ({
         urun: item.urun,
@@ -502,7 +501,7 @@ const OrderForm: React.FC = () => {
       title: 'USD Fiyat / Kur',
       key: 'usd_price',
       width: '13%',
-      render: (record: SiparisKalem, _, index: number) => (
+      render: (record: SiparisKalem, _: any, index: number) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontWeight: 'bold', color: '#1890ff', fontSize: '14px' }}>
@@ -588,7 +587,7 @@ const OrderForm: React.FC = () => {
       title: 'İşlem',
       key: 'action',
       width: '5%',
-      render: (_, record: SiparisKalem, index: number) => (
+      render: (_: any, record: SiparisKalem, index: number) => (
         <Button
           type="text"
           danger
@@ -661,7 +660,7 @@ const OrderForm: React.FC = () => {
                   placeholder="Müşteri seçin"
                   showSearch
                   filterOption={(input, option) =>
-                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || '')?.toLowerCase().includes(input.toLowerCase())
                   }
                   onChange={handleCustomerChange}
                 >
@@ -695,7 +694,7 @@ const OrderForm: React.FC = () => {
                   placeholder="Ülke seçin"
                   showSearch
                   filterOption={(input, option) =>
-                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || '')?.toLowerCase().includes(input.toLowerCase())
                   }
                   value={customerCountry}
                   onChange={(value) => setCustomerCountry(value)}
@@ -718,7 +717,7 @@ const OrderForm: React.FC = () => {
                   placeholder="Ülke seçin"
                   showSearch
                   filterOption={(input, option) =>
-                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || '')?.toLowerCase().includes(input.toLowerCase())
                   }
                   value={endUserCountry}
                   onChange={handleEndUserCountryChange}

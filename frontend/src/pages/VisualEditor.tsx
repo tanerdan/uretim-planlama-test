@@ -94,7 +94,7 @@ const VisualEditor: React.FC = () => {
       container: editorRef.current,
       plugins: [webpage],
       pluginsOpts: {
-        [webpage]: {
+        [webpage as string]: {
           blocks: ['link-block', 'quote', 'text-basic'],
         }
       },
@@ -194,10 +194,10 @@ const VisualEditor: React.FC = () => {
             resizable: {
               maxDim: 350,
               minDim: 200,
-              tc: 0,
-              cl: 1,
-              cr: 0,
-              bc: 0,
+              tc: false,
+              cl: true,
+              cr: false,
+              bc: false,
               keyWidth: 'flex-basis',
             },
           },
@@ -207,10 +207,10 @@ const VisualEditor: React.FC = () => {
             resizable: {
               maxDim: 350,
               minDim: 200,
-              tc: 0,
-              cl: 1,
-              cr: 0,
-              bc: 0,
+              tc: false,
+              cl: true,
+              cr: false,
+              bc: false,
               keyWidth: 'flex-basis',
             },
           },
@@ -220,10 +220,10 @@ const VisualEditor: React.FC = () => {
             resizable: {
               maxDim: 350,
               minDim: 200,
-              tc: 0,
-              cl: 1,
-              cr: 0,
-              bc: 0,
+              tc: false,
+              cl: true,
+              cr: false,
+              bc: false,
               keyWidth: 'flex-basis',
             },
           },

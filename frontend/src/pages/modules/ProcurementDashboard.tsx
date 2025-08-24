@@ -174,7 +174,7 @@ const ProcurementDashboard: React.FC = () => {
                   innerRadius={40}
                   outerRadius={80}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} %${(percent * 100).toFixed(0)}`}
+                  label={({ name, percent }) => `${name} %${((percent || 0) * 100).toFixed(0)}`}
                 >
                   {supplierPerformance.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -194,7 +194,7 @@ const ProcurementDashboard: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="category" />
                 <YAxis />
-                <Tooltip formatter={(value) => [`₺${(value / 1000).toFixed(0)}K`]} />
+                <Tooltip formatter={(value) => [`₺${(Number(value) / 1000).toFixed(0)}K`]} />
                 <Bar dataKey="spent" fill="#1890ff" name="Harcanan" />
                 <Bar dataKey="budget" fill="#52c41a" name="Bütçe" />
               </BarChart>

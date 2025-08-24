@@ -94,8 +94,6 @@ const OrderList: React.FC = () => {
       unitPrice: 'Birim Fiyat',
       currency: 'Para Birimi',
       totalPrice: 'Toplam',
-      deliveryDate: 'Teslim Tarihi',
-      endUserCountry: 'Son Kullanıcı Ülke',
       statusLabels: {
         'beklemede': 'Beklemede',
         'malzeme_planlandi': 'Malzeme Planlandı',
@@ -135,8 +133,6 @@ const OrderList: React.FC = () => {
       unitPrice: 'Unit Price',
       currency: 'Currency',
       totalPrice: 'Total',
-      deliveryDate: 'Delivery Date',
-      endUserCountry: 'End User Country',
       statusLabels: {
         'beklemede': 'Pending',
         'malzeme_planlandi': 'Materials Planned',
@@ -352,7 +348,7 @@ const OrderList: React.FC = () => {
       title: t.actions,
       key: 'actions',
       width: 120,
-      render: (_, record: Siparis) => (
+      render: (_: any, record: Siparis) => (
         <Space size="small">
           <Tooltip title={t.viewDetail}>
             <Button 
@@ -595,9 +591,9 @@ const OrderList: React.FC = () => {
           expandable={{
             expandedRowRender,
             expandedRowKeys,
-            onExpandedRowsChange: setExpandedRowKeys,
+            onExpandedRowsChange: (expandedRows: readonly React.Key[]) => setExpandedRowKeys([...expandedRows]),
             expandRowByClick: true,
-            rowExpandable: (record: Siparis) => (record.kalemler && record.kalemler.length > 0),
+            rowExpandable: (record: Siparis) => Boolean(record.kalemler && record.kalemler.length > 0),
           }}
           pagination={{
             current: currentPage,

@@ -108,7 +108,7 @@ const SalesDashboard: React.FC = () => {
     dayjs(order.tarih).isAfter(yearStart)
   );
   const yearToDateRevenue = yearToDateOrders.reduce((sum, order) => 
-    sum + (parseFloat(order.toplam_tutar) || 0), 0
+    sum + (parseFloat(String(order.toplam_tutar)) || 0), 0
   );
 
   // Bu ay veriler
@@ -117,7 +117,7 @@ const SalesDashboard: React.FC = () => {
     dayjs(order.tarih).isAfter(thisMonthStart)
   );
   const thisMonthRevenue = thisMonthOrders.reduce((sum, order) => 
-    sum + (parseFloat(order.toplam_tutar) || 0), 0
+    sum + (parseFloat(String(order.toplam_tutar)) || 0), 0
   );
 
   // Helper function for number formatting with thousands separator
@@ -161,7 +161,7 @@ const SalesDashboard: React.FC = () => {
       id: order.siparis_no,
       orderId: order.id,
       customer: order.musteri_adi || `Müşteri ID: ${order.musteri}`,
-      amount: `$${formatNumber(parseFloat(order.toplam_tutar || '0'))}`,
+      amount: `$${formatNumber(parseFloat(String(order.toplam_tutar || 0)))}`,
       status: order.durum,
       progress: getOrderProgress(order.durum),
       date: dayjs(order.olusturulma_tarihi).format('DD.MM.YYYY')
@@ -200,7 +200,7 @@ const SalesDashboard: React.FC = () => {
       months.push({
         month: monthStart.format('MMM YY'),
         siparisler: monthOrders.length,
-        ciro: monthOrders.reduce((sum, order) => sum + (parseFloat(order.toplam_tutar) || 0), 0)
+        ciro: monthOrders.reduce((sum, order) => sum + (parseFloat(String(order.toplam_tutar)) || 0), 0)
       });
     }
     return months;
@@ -344,7 +344,7 @@ const SalesDashboard: React.FC = () => {
             };
           }
           countryMap[country].count += 1; // Her kalem bir sipariş olarak sayılır
-          countryMap[country].total += parseFloat(kalem.toplam_tutar || '0'); // Kalem tutarını kullan
+          countryMap[country].total += parseFloat(String(kalem.toplam_tutar || 0)); // Kalem tutarını kullan
         });
       } else {
         // Kalem yoksa sipariş seviyesinde hesapla (fallback)
@@ -357,7 +357,7 @@ const SalesDashboard: React.FC = () => {
           };
         }
         countryMap[country].count += 1;
-        countryMap[country].total += parseFloat(order.toplam_tutar || '0');
+        countryMap[country].total += parseFloat(String(order.toplam_tutar || 0));
       }
     });
 
@@ -646,7 +646,7 @@ const SalesDashboard: React.FC = () => {
               </div>
               <Statistic
                 value={activeOrders.length > 0 ? 
-                  formatNumber(Math.round(activeOrders.reduce((sum, order) => sum + (parseFloat(order.toplam_tutar) || 0), 0) / 
+                  formatNumber(Math.round(activeOrders.reduce((sum, order) => sum + (parseFloat(String(order.toplam_tutar)) || 0), 0) / 
                    new Set(activeOrders.map(o => o.musteri)).size))
                   : 0
                 }
@@ -687,8 +687,8 @@ const SalesDashboard: React.FC = () => {
                     <Geographies 
                       geography="https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"
                     >
-                      {({ geographies }) => 
-                        geographies?.map((geo) => (
+                      {({ geographies }: { geographies: any[] }) => 
+                        geographies?.map((geo: any) => (
                           <Geography
                             key={geo.rsmKey}
                             geography={geo}
@@ -768,8 +768,8 @@ const SalesDashboard: React.FC = () => {
                 dayjs(order.tarih).isAfter(lastMonth) && dayjs(order.tarih).isBefore(lastMonthEnd)
               );
               
-              const thisMonthRevenue = thisMonthOrders.reduce((sum, order) => sum + (parseFloat(order.toplam_tutar) || 0), 0);
-              const lastMonthRevenue = lastMonthOrders.reduce((sum, order) => sum + (parseFloat(order.toplam_tutar) || 0), 0);
+              const thisMonthRevenue = thisMonthOrders.reduce((sum, order) => sum + (parseFloat(String(order.toplam_tutar)) || 0), 0);
+              const lastMonthRevenue = lastMonthOrders.reduce((sum, order) => sum + (parseFloat(String(order.toplam_tutar)) || 0), 0);
               
               const revenueChange = lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100) : 0;
               const orderChange = lastMonthOrders.length > 0 ? ((thisMonthOrders.length - lastMonthOrders.length) / lastMonthOrders.length * 100) : 0;
