@@ -15,9 +15,26 @@ BASIC_AUTH_ENABLED = True
 
 # Database - PostgreSQL on Render
 import dj_database_url
-DATABASES = {
-    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
-}
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Clean up any potential encoding issues
+    DATABASE_URL = DATABASE_URL.strip()
+    # Remove any BOM (Byte Order Mark) characters
+    if DATABASE_URL.startswith('\ufeff'):
+        DATABASE_URL = DATABASE_URL[1:]
+    
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
+    }
+else:
+    # Fallback to SQLite if no DATABASE_URL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Static files with WhiteNoise
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
