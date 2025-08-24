@@ -14,8 +14,8 @@ services:
     plan: free
     region: frankfurt
     env: python
-    buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
-    startCommand: "cd backend && gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT"
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput --settings=backend.production_settings && python manage.py migrate --settings=backend.production_settings"
+    startCommand: "gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT --settings=backend.production_settings"
     envVars:
       - key: DEBUG
         value: "False"
