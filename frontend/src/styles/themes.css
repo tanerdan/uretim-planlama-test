@@ -1,0 +1,138 @@
+/* Global theme styles */
+
+/* Light theme */
+.light-theme {
+  background-color: #f5f5f5;
+  color: #000000d9;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.light-theme .gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.light-theme .sales-gradient {
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+}
+
+.light-theme .procurement-gradient {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+}
+
+.light-theme .production-gradient {
+  background: linear-gradient(135deg, #722ed1 0%, #531dab 100%);
+}
+
+.light-theme .reports-gradient {
+  background: linear-gradient(135deg, #fa8c16 0%, #d46b08 100%);
+}
+
+/* Dark theme */
+.dark-theme {
+  background-color: #000000;
+  color: #ffffffd9;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark-theme .gradient-bg {
+  background: linear-gradient(135deg, #4c6ef5 0%, #845ef7 100%);
+}
+
+.dark-theme .sales-gradient {
+  background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+}
+
+.dark-theme .procurement-gradient {
+  background: linear-gradient(135deg, #339af0 0%, #1c7ed6 100%);
+}
+
+.dark-theme .production-gradient {
+  background: linear-gradient(135deg, #9775fa 0%, #7950f2 100%);
+}
+
+.dark-theme .reports-gradient {
+  background: linear-gradient(135deg, #ff922b 0%, #fd7e14 100%);
+}
+
+/* Card hover effects for dark theme */
+.dark-theme .ant-card {
+  border-color: #424242;
+}
+
+.dark-theme .ant-card:hover {
+  border-color: #1890ff;
+  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.2);
+}
+
+/* Scrollbar styling */
+.dark-theme ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark-theme ::-webkit-scrollbar-track {
+  background: #1f1f1f;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+
+.light-theme ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.light-theme ::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 4px;
+}
+
+.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: #8c8c8c;
+}
+
+/* Animation transitions */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Loading states */
+.theme-transition {
+  animation: fadeInTheme 0.3s ease-in-out;
+}
+
+@keyframes fadeInTheme {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Module header gradients with theme support */
+.module-header {
+  transition: background 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.module-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.1;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.3) 0%, transparent 70%);
+  pointer-events: none;
+}

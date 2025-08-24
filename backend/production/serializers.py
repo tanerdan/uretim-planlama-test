@@ -22,11 +22,21 @@ class UrunSerializer(serializers.ModelSerializer):
 
 class SiparisKalemSerializer(serializers.ModelSerializer):
     urun_adi = serializers.CharField(source='urun.ad', read_only=True)
-    toplam_fiyat = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    toplam_tutar = serializers.SerializerMethodField()
     
     class Meta:
         model = SiparisKalem
-        fields = ['id', 'urun', 'urun_adi', 'miktar', 'birim_fiyat', 'toplam_fiyat', 'notlar']
+        fields = [
+            'id', 'urun', 'urun_adi', 'miktar', 'birim_fiyat', 
+            'doviz', 'kur', 'birim_fiyat_usd', 'teslim_tarihi', 
+            'son_kullanici_ulke', 'toplam_tutar', 'notlar'
+        ]
+    
+    def get_toplam_tutar(self, obj):
+        """USD cinsinden toplam tutarı hesapla"""
+        if obj.birim_fiyat_usd:
+            return obj.miktar * obj.birim_fiyat_usd
+        return 0
 
 
 class SiparisDosyaSerializer(serializers.ModelSerializer):
@@ -45,22 +55,38 @@ class SiparisSerializer(serializers.ModelSerializer):
         model = Siparis
         fields = [
             'id', 'siparis_no', 'musteri', 'musteri_adi', 'tarih', 
-            'teslim_tarihi', 'durum', 'notlar', 'dosya', 'kalemler', 
-            'dosyalar', 'toplam_tutar', 'olusturulma_tarihi', 'guncellenme_tarihi'
+            'durum', 'musteri_ulke', 
+            'notlar', 'siparis_mektubu', 'maliyet_hesabi', 'dosya', 
+            'kalemler', 'dosyalar', 'toplam_tutar', 
+            'olusturulma_tarihi', 'guncellenme_tarihi'
         ]
 
 class SiparisCreateSerializer(serializers.ModelSerializer):
-    kalemler = SiparisKalemSerializer(many=True)
+    kalemler = serializers.CharField() # JSON string olarak alacak
     
     class Meta:
         model = Siparis
-        fields = ['siparis_no', 'musteri', 'tarih', 'teslim_tarihi', 'durum', 'notlar', 'dosya', 'kalemler']
+        fields = ['id', 'siparis_no', 'musteri', 'tarih', 'durum', 'musteri_ulke', 'notlar', 'siparis_mektubu', 'maliyet_hesabi', 'dosya', 'kalemler']
     
     def create(self, validated_data):
-        kalemler_data = validated_data.pop('kalemler')
+        import json
+        
+        # Kalemler JSON string olarak geliyor, parse et
+        kalemler_json = validated_data.pop('kalemler', '[]')
+        if isinstance(kalemler_json, str):
+            kalemler_data = json.loads(kalemler_json)
+        else:
+            kalemler_data = kalemler_json
+            
         siparis = Siparis.objects.create(**validated_data)
         
         for kalem_data in kalemler_data:
+            # Urun ID'sini integer'a çevir ve Urun nesnesini al
+            if 'urun' in kalem_data:
+                from .models import Urun
+                urun_id = int(kalem_data['urun'])
+                kalem_data['urun'] = Urun.objects.get(id=urun_id)
+            
             SiparisKalem.objects.create(siparis=siparis, **kalem_data)
         
         return siparis

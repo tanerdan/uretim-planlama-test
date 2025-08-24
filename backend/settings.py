@@ -2,6 +2,10 @@
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# .env dosyasını yükle
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -110,7 +114,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+
+# Development için CORS_ALLOW_ALL_ORIGINS = True de kullanabilirsiniz
+# CORS_ALLOW_ALL_ORIGINS = True
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -118,8 +127,18 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
+    'PAGE_SIZE': 1000  # Müşteri dropdown'ı için artırıldı
 }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Mikro Fly V17 Entegrasyonu Ayarları
+MIKRO_FLY_SERVER = os.getenv('MIKRO_FLY_SERVER', 'localhost')
+MIKRO_FLY_DATABASE = os.getenv('MIKRO_FLY_DATABASE', 'MikroFly_V17')
+MIKRO_FLY_USERNAME = os.getenv('MIKRO_FLY_USERNAME', 'sa')
+MIKRO_FLY_PASSWORD = os.getenv('MIKRO_FLY_PASSWORD', '')
+
+# Senkronizasyon ayarları
+MIKRO_FLY_SYNC_ENABLED = True
+MIKRO_FLY_SYNC_INTERVAL_MINUTES = 60  # Her saat başı senkronizasyon

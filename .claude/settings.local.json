@@ -10,7 +10,21 @@
       "Bash(git add:*)",
       "Bash(git config:*)",
       "Bash(git commit:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(7z:*)",
+      "Bash(tar:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(pip install:*)",
+      "Bash(python test_mikro_fly_connection.py:*)",
+      "Bash(python:*)",
+      "Bash(del temp_response.json)",
+      "Bash(grep:*)",
+      "Bash(del nul)"
     ],
     "additionalDirectories": [
       "D:\\Documents_D\\SoftwareDevelopment",

@@ -167,7 +167,7 @@ class UrunAdmin(admin.ModelAdmin):
 class SiparisKalemInline(admin.TabularInline):
     model = SiparisKalem
     extra = 1  # Boş form sayısı
-    fields = ['urun', 'miktar', 'birim_fiyat', 'notlar']
+    fields = ['urun', 'miktar', 'birim_fiyat', 'teslim_tarihi', 'notlar']
     autocomplete_fields = ['urun']  # Ürün seçimi için otomatik tamamlama
 
 class SiparisDosyaInline(admin.TabularInline):
@@ -177,8 +177,8 @@ class SiparisDosyaInline(admin.TabularInline):
 
 @admin.register(Siparis)
 class SiparisAdmin(admin.ModelAdmin):
-    list_display = ['siparis_no', 'musteri', 'tarih', 'teslim_tarihi', 'durum', 'toplam_tutar_goster', 'dosya_var_mi']
-    list_filter = ['durum', 'tarih', 'teslim_tarihi']
+    list_display = ['siparis_no', 'musteri', 'tarih', 'durum', 'toplam_tutar_goster', 'dosya_var_mi']
+    list_filter = ['durum', 'tarih']
     search_fields = ['siparis_no', 'musteri__ad', 'musteri__kod']
     date_hierarchy = 'tarih'
     ordering = ['-tarih']
@@ -189,7 +189,7 @@ class SiparisAdmin(admin.ModelAdmin):
             'fields': ('siparis_no', 'musteri', 'durum')
         }),
         ('Tarihler', {
-            'fields': ('tarih', 'teslim_tarihi')
+            'fields': ('tarih',)
         }),
         ('Ek Bilgiler', {
             'fields': ('notlar', 'dosya'),

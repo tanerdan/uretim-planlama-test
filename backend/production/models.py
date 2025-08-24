@@ -5,6 +5,226 @@ from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.contrib.auth.models import User
 
+# Ülke seçenekleri
+ULKE_CHOICES = [
+    ('AF', 'Afganistan'),
+    ('AL', 'Arnavutluk'),
+    ('DZ', 'Cezayir'),
+    ('AS', 'Amerikan Samoası'),
+    ('AD', 'Andorra'),
+    ('AO', 'Angola'),
+    ('AI', 'Anguilla'),
+    ('AQ', 'Antarktika'),
+    ('AG', 'Antigua ve Barbuda'),
+    ('AR', 'Arjantin'),
+    ('AM', 'Ermenistan'),
+    ('AW', 'Aruba'),
+    ('AU', 'Avustralya'),
+    ('AT', 'Avusturya'),
+    ('AZ', 'Azerbaycan'),
+    ('BS', 'Bahamalar'),
+    ('BH', 'Bahreyn'),
+    ('BD', 'Bangladeş'),
+    ('BB', 'Barbados'),
+    ('BY', 'Belarus'),
+    ('BE', 'Belçika'),
+    ('BZ', 'Belize'),
+    ('BJ', 'Benin'),
+    ('BM', 'Bermuda'),
+    ('BT', 'Butan'),
+    ('BO', 'Bolivya'),
+    ('BA', 'Bosna Hersek'),
+    ('BW', 'Botsvana'),
+    ('BR', 'Brezilya'),
+    ('BG', 'Bulgaristan'),
+    ('BF', 'Burkina Faso'),
+    ('BI', 'Burundi'),
+    ('KH', 'Kamboçya'),
+    ('CM', 'Kamerun'),
+    ('CA', 'Kanada'),
+    ('CV', 'Cape Verde'),
+    ('KY', 'Cayman Adaları'),
+    ('CF', 'Orta Afrika Cumhuriyeti'),
+    ('TD', 'Çad'),
+    ('CL', 'Şili'),
+    ('CN', 'Çin'),
+    ('CO', 'Kolombiya'),
+    ('KM', 'Komorlar'),
+    ('CG', 'Kongo'),
+    ('CD', 'Demokratik Kongo Cumhuriyeti'),
+    ('CR', 'Kosta Rika'),
+    ('CI', 'Fildişi Sahili'),
+    ('HR', 'Hırvatistan'),
+    ('CU', 'Küba'),
+    ('CY', 'Kıbrıs'),
+    ('CZ', 'Çek Cumhuriyeti'),
+    ('DK', 'Danimarka'),
+    ('DJ', 'Cibuti'),
+    ('DM', 'Dominika'),
+    ('DO', 'Dominik Cumhuriyeti'),
+    ('EC', 'Ekvador'),
+    ('EG', 'Mısır'),
+    ('SV', 'El Salvador'),
+    ('GQ', 'Ekvator Ginesi'),
+    ('ER', 'Eritre'),
+    ('EE', 'Estonya'),
+    ('ET', 'Etiyopya'),
+    ('FK', 'Falkland Adaları'),
+    ('FO', 'Faroe Adaları'),
+    ('FJ', 'Fiji'),
+    ('FI', 'Finlandiya'),
+    ('FR', 'Fransa'),
+    ('GA', 'Gabon'),
+    ('GM', 'Gambiya'),
+    ('GE', 'Gürcistan'),
+    ('DE', 'Almanya'),
+    ('GH', 'Gana'),
+    ('GI', 'Cebelitarık'),
+    ('GR', 'Yunanistan'),
+    ('GL', 'Grönland'),
+    ('GD', 'Grenada'),
+    ('GU', 'Guam'),
+    ('GT', 'Guatemala'),
+    ('GG', 'Guernsey'),
+    ('GN', 'Gine'),
+    ('GW', 'Gine-Bissau'),
+    ('GY', 'Guyana'),
+    ('HT', 'Haiti'),
+    ('HN', 'Honduras'),
+    ('HK', 'Hong Kong'),
+    ('HU', 'Macaristan'),
+    ('IS', 'İzlanda'),
+    ('IN', 'Hindistan'),
+    ('ID', 'Endonezya'),
+    ('IR', 'İran'),
+    ('IQ', 'Irak'),
+    ('IE', 'İrlanda'),
+    ('IM', 'Man Adası'),
+    ('IL', 'İsrail'),
+    ('IT', 'İtalya'),
+    ('JM', 'Jamaika'),
+    ('JP', 'Japonya'),
+    ('JE', 'Jersey'),
+    ('JO', 'Ürdün'),
+    ('KZ', 'Kazakistan'),
+    ('KE', 'Kenya'),
+    ('KI', 'Kiribati'),
+    ('KP', 'Kuzey Kore'),
+    ('KR', 'Güney Kore'),
+    ('KW', 'Kuveyt'),
+    ('KG', 'Kırgızistan'),
+    ('LA', 'Laos'),
+    ('LV', 'Letonya'),
+    ('LB', 'Lübnan'),
+    ('LS', 'Lesotho'),
+    ('LR', 'Liberya'),
+    ('LY', 'Libya'),
+    ('LI', 'Liechtenstein'),
+    ('LT', 'Litvanya'),
+    ('LU', 'Lüksemburg'),
+    ('MO', 'Makao'),
+    ('MK', 'Makedonya'),
+    ('MG', 'Madagaskar'),
+    ('MW', 'Malavi'),
+    ('MY', 'Malezya'),
+    ('MV', 'Maldivler'),
+    ('ML', 'Mali'),
+    ('MT', 'Malta'),
+    ('MH', 'Marshall Adaları'),
+    ('MR', 'Moritanya'),
+    ('MU', 'Mauritius'),
+    ('MX', 'Meksika'),
+    ('FM', 'Mikronezya'),
+    ('MD', 'Moldova'),
+    ('MC', 'Monako'),
+    ('MN', 'Moğolistan'),
+    ('ME', 'Karadağ'),
+    ('MA', 'Fas'),
+    ('MZ', 'Mozambik'),
+    ('MM', 'Myanmar'),
+    ('NA', 'Namibya'),
+    ('NR', 'Nauru'),
+    ('NP', 'Nepal'),
+    ('NL', 'Hollanda'),
+    ('NC', 'Yeni Kaledonya'),
+    ('NZ', 'Yeni Zelanda'),
+    ('NI', 'Nikaragua'),
+    ('NE', 'Nijer'),
+    ('NG', 'Nijerya'),
+    ('NO', 'Norveç'),
+    ('OM', 'Umman'),
+    ('PK', 'Pakistan'),
+    ('PW', 'Palau'),
+    ('PS', 'Filistin'),
+    ('PA', 'Panama'),
+    ('PG', 'Papua Yeni Gine'),
+    ('PY', 'Paraguay'),
+    ('PE', 'Peru'),
+    ('PH', 'Filipinler'),
+    ('PL', 'Polonya'),
+    ('PT', 'Portekiz'),
+    ('PR', 'Porto Riko'),
+    ('QA', 'Katar'),
+    ('RO', 'Romanya'),
+    ('RU', 'Rusya'),
+    ('RW', 'Ruanda'),
+    ('KN', 'Saint Kitts ve Nevis'),
+    ('LC', 'Saint Lucia'),
+    ('VC', 'Saint Vincent ve Grenadinler'),
+    ('WS', 'Samoa'),
+    ('SM', 'San Marino'),
+    ('ST', 'Sao Tome ve Principe'),
+    ('SA', 'Suudi Arabistan'),
+    ('SN', 'Senegal'),
+    ('RS', 'Sırbistan'),
+    ('SC', 'Seyşeller'),
+    ('SL', 'Sierra Leone'),
+    ('SG', 'Singapur'),
+    ('SK', 'Slovakya'),
+    ('SI', 'Slovenya'),
+    ('SB', 'Solomon Adaları'),
+    ('SO', 'Somali'),
+    ('ZA', 'Güney Afrika'),
+    ('SS', 'Güney Sudan'),
+    ('ES', 'İspanya'),
+    ('LK', 'Sri Lanka'),
+    ('SD', 'Sudan'),
+    ('SR', 'Surinam'),
+    ('SZ', 'Svaziland'),
+    ('SE', 'İsveç'),
+    ('CH', 'İsviçre'),
+    ('SY', 'Suriye'),
+    ('TW', 'Tayvan'),
+    ('TJ', 'Tacikistan'),
+    ('TZ', 'Tanzanya'),
+    ('TH', 'Tayland'),
+    ('TL', 'Doğu Timor'),
+    ('TG', 'Togo'),
+    ('TO', 'Tonga'),
+    ('TT', 'Trinidad ve Tobago'),
+    ('TN', 'Tunus'),
+    ('TR', 'Türkiye'),
+    ('TM', 'Türkmenistan'),
+    ('TV', 'Tuvalu'),
+    ('UG', 'Uganda'),
+    ('UA', 'Ukrayna'),
+    ('AE', 'Birleşik Arap Emirlikleri'),
+    ('GB', 'Birleşik Krallık'),
+    ('US', 'Amerika Birleşik Devletleri'),
+    ('UY', 'Uruguay'),
+    ('UZ', 'Özbekistan'),
+    ('VU', 'Vanuatu'),
+    ('VE', 'Venezuela'),
+    ('VN', 'Vietnam'),
+    ('VG', 'Virjin Adaları (İngiliz)'),
+    ('VI', 'Virjin Adaları (ABD)'),
+    ('WF', 'Wallis ve Futuna'),
+    ('EH', 'Batı Sahara'),
+    ('YE', 'Yemen'),
+    ('ZM', 'Zambiya'),
+    ('ZW', 'Zimbabve'),
+]
+
 class Musteri(models.Model):
     """Müşteri bilgileri modeli"""
     
@@ -37,6 +257,12 @@ class Musteri(models.Model):
         blank=True,
         verbose_name="Adres"
     )
+    ulke = models.CharField(
+        max_length=2,
+        choices=ULKE_CHOICES,
+        default='TR',
+        verbose_name="Ülke"
+    )
     
     # Ek bilgiler
     notlar = models.TextField(
@@ -46,6 +272,21 @@ class Musteri(models.Model):
     aktif = models.BooleanField(
         default=True,
         verbose_name="Aktif"
+    )
+    
+    # Mikro Fly Entegrasyonu
+    mikro_fly_kodu = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Mikro Fly Müşteri Kodu",
+        help_text="Mikro Fly V17'deki müşteri kodu"
+    )
+    mikro_fly_sync_tarihi = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Son Senkronizasyon Tarihi",
+        help_text="Mikro Fly'den son senkronizasyon tarihi"
     )
     
     # Zaman damgaları
@@ -114,6 +355,22 @@ class Urun(models.Model):
     birim = models.CharField(max_length=20, choices=BIRIM_CHOICES, default='adet') 
     stok_miktari = models.IntegerField(default=0)
     minimum_stok = models.IntegerField(default=0)
+    
+    # Mikro Fly Entegrasyonu
+    mikro_fly_kodu = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Mikro Fly Stok Kodu",
+        help_text="Mikro Fly V17'deki stok kodu"
+    )
+    mikro_fly_sync_tarihi = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Son Senkronizasyon Tarihi",
+        help_text="Mikro Fly'den son senkronizasyon tarihi"
+    )
+    
     olusturulma_tarihi = models.DateTimeField(auto_now_add=True)
     guncellenme_tarihi = models.DateTimeField(auto_now=True)
     
@@ -128,9 +385,9 @@ class Urun(models.Model):
     @property
     def stok_durumu(self):
         """Stok durumunu kontrol et"""
-        if self.mevcut_stok <= 0:
+        if self.stok_miktari <= 0:
             return "Stok Yok"
-        elif self.mevcut_stok <= self.minimum_stok:
+        elif self.stok_miktari <= self.minimum_stok:
             return "Kritik Stok"
         else:
             return "Stok Var"
@@ -169,15 +426,47 @@ class Siparis(models.Model):
     musteri = models.ForeignKey(Musteri, on_delete=models.CASCADE, related_name='siparisler')
     siparis_no = models.CharField(max_length=50, unique=True)
     tarih = models.DateField(default=timezone.now)
-    teslim_tarihi = models.DateField()
     durum = models.CharField(max_length=25, choices=DURUM_CHOICES, default='beklemede')
+    
+    # Ülke bilgileri
+    musteri_ulke = models.CharField(
+        max_length=2,
+        choices=ULKE_CHOICES,
+        blank=True,
+        verbose_name="Müşteri Ülke",
+        help_text="Müşteri adresinden otomatik alınır"
+    )
+    son_kullanici_ulke = models.CharField(
+        max_length=2,
+        choices=ULKE_CHOICES,
+        default='TR',
+        verbose_name="Son Kullanıcı Ülke",
+        help_text="Varsayılan olarak müşteri ülkesi ile aynıdır"
+    )
+    
     notlar = models.TextField(blank=True)
-    dosya = models.FileField(                    # <-- Bu satırı ekleyin
+    
+    # Dosya alanları
+    siparis_mektubu = models.FileField(
+        upload_to='siparis_dosyalari/mektuplar/%Y/%m/', 
+        blank=True, 
+        null=True,
+        verbose_name='Sipariş Mektubu',
+        help_text='Sipariş mektubunu yükleyiniz (Zorunlu - PDF, DOC, DOCX)'
+    )
+    maliyet_hesabi = models.FileField(
+        upload_to='siparis_dosyalari/maliyet/%Y/%m/', 
+        blank=True, 
+        null=True,
+        verbose_name='Maliyet Hesap Tablosu',
+        help_text='Maliyet hesap tablosunu yükleyiniz (Zorunlu - Excel, PDF)'
+    )
+    dosya = models.FileField(                    
         upload_to='siparis_dosyalari/%Y/%m/', 
         blank=True, 
         null=True,
         verbose_name='Ek Dosya',
-        help_text='PDF, Word, Excel veya resim dosyası ekleyebilirsiniz'
+        help_text='İsteğe bağlı ek dosya yükleyebilirsiniz'
     )
     olusturulma_tarihi = models.DateTimeField(auto_now_add=True)
     guncellenme_tarihi = models.DateTimeField(auto_now=True)
@@ -191,13 +480,68 @@ class Siparis(models.Model):
         return f"{self.siparis_no} - {self.musteri.ad}"
     
     def toplam_tutar(self):
-        return sum(kalem.toplam_fiyat() for kalem in self.kalemler.all())
+        """USD cinsinden toplam tutar"""
+        return sum(kalem.toplam_fiyat_usd() for kalem in self.kalemler.all())
 
 class SiparisKalem(models.Model):
+    DOVIZ_CHOICES = [
+        ('USD', 'US Dollar'),
+        ('EUR', 'Euro'),
+        ('GBP', 'British Pound'),
+        ('TRY', 'Turkish Lira'),
+        ('JPY', 'Japanese Yen'),
+        ('CHF', 'Swiss Franc'),
+        ('CAD', 'Canadian Dollar'),
+        ('AUD', 'Australian Dollar'),
+    ]
+    
     siparis = models.ForeignKey(Siparis, on_delete=models.CASCADE, related_name='kalemler')
     urun = models.ForeignKey(Urun, on_delete=models.CASCADE)
     miktar = models.IntegerField()
-    birim_fiyat = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Orijinal para birimi ve fiyat
+    doviz = models.CharField(
+        max_length=3, 
+        choices=DOVIZ_CHOICES, 
+        default='USD',
+        verbose_name="Para Birimi"
+    )
+    birim_fiyat = models.DecimalField(
+        max_digits=15, 
+        decimal_places=4,
+        verbose_name="Birim Fiyat",
+        help_text="Seçilen para birimindeki birim fiyat"
+    )
+    
+    # USD cinsinden değerler (ana döviz)
+    kur = models.DecimalField(
+        max_digits=10, 
+        decimal_places=6,
+        default=1.000000,
+        verbose_name="Döviz Kuru",
+        help_text="1 birim seçilen para birimi = X USD"
+    )
+    birim_fiyat_usd = models.DecimalField(
+        max_digits=15, 
+        decimal_places=4,
+        null=True,
+        blank=True,
+        verbose_name="Birim Fiyat (USD)",
+        help_text="USD cinsinden birim fiyat (otomatik hesaplanır)"
+    )
+    
+    teslim_tarihi = models.DateField(
+        default=timezone.now,
+        verbose_name="Teslim Tarihi",
+        help_text="Bu kalemin teslim tarihi"
+    )
+    son_kullanici_ulke = models.CharField(
+        max_length=2, 
+        choices=ULKE_CHOICES, 
+        default='TR',
+        verbose_name="Son Kullanıcı Ülke",
+        help_text="Bu kalemin gönderileceği son kullanıcı ülkesi"
+    )
     notlar = models.TextField(blank=True)
     
     class Meta:
@@ -208,7 +552,23 @@ class SiparisKalem(models.Model):
         return f"{self.siparis.siparis_no} - {self.urun.ad} ({self.miktar} {self.urun.birim})"
     
     def toplam_fiyat(self):
+        """Orijinal para birimindeki toplam fiyat"""
         return self.miktar * self.birim_fiyat
+    
+    def toplam_fiyat_usd(self):
+        """USD cinsinden toplam fiyat"""
+        return self.miktar * self.birim_fiyat_usd
+    
+    def save(self, *args, **kwargs):
+        # Birim fiyat USD'yi otomatik hesapla
+        if self.doviz == 'USD':
+            self.birim_fiyat_usd = self.birim_fiyat
+            self.kur = 1.000000
+        else:
+            # Kur ile USD'ye çevir
+            self.birim_fiyat_usd = self.birim_fiyat * self.kur
+        
+        super().save(*args, **kwargs)
     
 class SiparisDosya(models.Model):
     siparis = models.ForeignKey(Siparis, on_delete=models.CASCADE, related_name='dosyalar')
