@@ -1,9 +1,11 @@
-services:
-  # PostgreSQL Database
-  - type: pserv
-    name: uretim-planlama-db
+databases:
+  - name: uretim-planlama-db
+    databaseName: uretim_planlama
+    user: uretim_user
     plan: free
     region: frankfurt
+
+services:
     
   # Django Backend
   - type: web
