@@ -1,0 +1,11 @@
+frontend/
+_frontend/
+*.md
+.git/
+.claude/
+venv/
+node_modules/
+.env
+staticfiles/
+media/
+db.sqlite3
