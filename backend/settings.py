@@ -2,10 +2,14 @@
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
 
-# .env dosyasını yükle
-load_dotenv()
+# .env dosyasını yükle (sadece local development için)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Production'da python-dotenv gerekli değil
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
