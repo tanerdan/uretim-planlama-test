@@ -4,9 +4,6 @@ services:
     name: uretim-planlama-db
     plan: free
     region: frankfurt
-    env: python
-    buildCommand: "echo 'Database service'"
-    startCommand: "echo 'Database running'"
     
   # Django Backend
   - type: web
