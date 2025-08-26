@@ -44,3 +44,31 @@ class BasicAuthMiddleware:
         response = HttpResponse('Authentication required', status=401)
         response['WWW-Authenticate'] = 'Basic realm="Test Environment"'
         return response
+
+
+class AutoAdminLoginMiddleware:
+    """
+    Development only middleware to auto-login admin user
+    for seamless frontend-admin integration
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Only work in DEBUG mode for admin pages
+        if getattr(settings, 'DEBUG', False) and request.path.startswith('/admin/'):
+            if not request.user.is_authenticated:
+                # Try to get or create admin user
+                try:
+                    from django.contrib.auth import login
+                    from django.contrib.auth.models import User
+                    
+                    admin_user = User.objects.filter(is_superuser=True).first()
+                    if admin_user:
+                        # Auto login admin user
+                        login(request, admin_user, backend='django.contrib.auth.backends.ModelBackend')
+                except Exception as e:
+                    print(f"Auto admin login failed: {e}")
+        
+        response = self.get_response(request)
+        return response

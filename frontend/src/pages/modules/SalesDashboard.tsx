@@ -414,6 +414,7 @@ const SalesDashboard: React.FC = () => {
 
   const isLoading = ordersLoading || customersLoading || statsLoading;
 
+
   return (
     <div>
       <ModuleHeader>

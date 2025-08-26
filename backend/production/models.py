@@ -408,11 +408,130 @@ class UrunRecete(models.Model):
         return f"{self.urun.ad} için {self.miktar} {self.malzeme.birim} {self.malzeme.ad}"
     
     def clean(self):
-        """Validasyon: Bir ürün kendisini malzeme olarak kullanamaz"""
+        """Validasyon kuralları"""
         from django.core.exceptions import ValidationError
+        
+        # Bir ürün kendisini malzeme olarak kullanamaz
         if self.urun == self.malzeme:
             raise ValidationError('Bir ürün kendisini malzeme olarak kullanamaz!')
         
+        # Sadece bitmiş ürün ve ara ürünlerin reçetesi olabilir
+        if self.urun.kategori == 'hammadde':
+            raise ValidationError('Hammaddelerin reçetesi olamaz! Sadece bitmiş ürün ve ara ürünlerin reçetesi olabilir.')
+        
+        # Malzeme hammadde veya ara ürün olmalı (bitmiş ürün reçetede kullanılamaz)  
+        if self.malzeme.kategori == 'bitmis_urun':
+            raise ValidationError('Reçetede bitmiş ürün kullanılamaz! Sadece hammadde ve ara ürün kullanılabilir.')
+
+
+class BOMTemplate(models.Model):
+    """BOM Template - Manuel oluşturulan reçete şablonları"""
+    BIRIM_CHOICES = [
+        ('adet', 'Adet'),
+        ('kg', 'Kilogram'),
+        ('m', 'Metre'),
+        ('m2', 'Metrekare'),
+        ('lt', 'Litre'),
+        ('gr', 'Gram'),
+        ('ton', 'Ton'),
+    ]
+    
+    TUR_CHOICES = [
+        ('hammadde', 'Hammadde'),
+        ('ara_urun', 'Ara Ürün'),
+    ]
+    
+    bom_tanimi = models.CharField(max_length=200, verbose_name='BOM Tanımı')
+    aciklama = models.TextField(blank=True, verbose_name='Açıklama')
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True)
+    guncellenme_tarihi = models.DateTimeField(auto_now=True)
+    
+    # JSON field for storing material list
+    malzemeler = models.JSONField(
+        default=list,
+        verbose_name='Malzemeler',
+        help_text='Malzeme listesi JSON formatında'
+    )
+    
+    # Manuel ürün eşleştirmesi (opsiyonel)
+    eslestirilen_urun = models.ForeignKey(
+        Urun, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        verbose_name='Eşleştirilen Ürün'
+    )
+    
+    class Meta:
+        verbose_name = 'BOM Template'
+        verbose_name_plural = 'BOM Templates'
+        ordering = ['-guncellenme_tarihi']
+    
+    def __str__(self):
+        return self.bom_tanimi
+    
+    def get_missing_dependencies(self):
+        """Eksik ara ürün BOM'larını tespit et"""
+        missing_boms = []
+        
+        for malzeme in self.malzemeler:
+            if malzeme.get('tur') == 'ara_urun':
+                malzeme_adi = malzeme.get('malzeme_adi', '')
+                
+                # Bu ara ürün için BOM var mı kontrol et
+                existing_bom = BOMTemplate.objects.filter(
+                    bom_tanimi__icontains=malzeme_adi
+                ).exists()
+                
+                if not existing_bom:
+                    missing_boms.append(malzeme_adi)
+        
+        return missing_boms
+    
+    def is_complete(self):
+        """BOM'un tam olup olmadığını kontrol et"""
+        return len(self.get_missing_dependencies()) == 0
+    
+    def get_hierarchical_structure(self, visited=None):
+        """BOM'un hiyerarşik yapısını döndür"""
+        if visited is None:
+            visited = set()
+        
+        if self.id in visited:
+            return {'error': 'Circular dependency detected'}
+        
+        visited.add(self.id)
+        structure = {
+            'id': self.id,
+            'name': self.bom_tanimi,
+            'materials': []
+        }
+        
+        for malzeme in self.malzemeler:
+            material_info = {
+                'name': malzeme.get('malzeme_adi', ''),
+                'type': malzeme.get('tur', ''),
+                'quantity': malzeme.get('miktar', 0),
+                'unit': malzeme.get('birim', ''),
+                'children': []
+            }
+            
+            # Eğer ara ürünse, onun BOM'unu da ekle
+            if malzeme.get('tur') == 'ara_urun':
+                malzeme_adi = malzeme.get('malzeme_adi', '')
+                sub_bom = BOMTemplate.objects.filter(
+                    bom_tanimi__icontains=malzeme_adi
+                ).first()
+                
+                if sub_bom:
+                    material_info['children'] = [sub_bom.get_hierarchical_structure(visited.copy())]
+                else:
+                    material_info['missing_bom'] = True
+            
+            structure['materials'].append(material_info)
+        
+        visited.remove(self.id)
+        return structure
 class Siparis(models.Model):
     DURUM_CHOICES = [
         ('beklemede', 'Beklemede'),

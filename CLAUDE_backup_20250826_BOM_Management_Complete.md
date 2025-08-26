@@ -235,18 +235,7 @@ python manage.py collectstatic
 - **Menu Navigation**: Hierarchical menu structure ve routing sorunları ✅
 - **API Response Handling**: Error handling ve loading states iyileştirildi ✅
 
-## 🌐 Frontend Web Arayüzü ⭐⭐ (24 Ağustos 2025)
-
-### **BOM Management Sistemi ⭐⭐⭐ (YENİ - 26 Ağustos 2025)**:
-- **Tam Fonksiyonel BOM Yönetimi**: Create, Read, Update, Delete operations
-- **Sipariş Kalemi Eşleştirmesi**: BOM'ları sipariş kalemleri ile otomatik eşleştirme
-- **Ara Ürün BOM Sistemi**: Ana BOM'larda ara ürün BOM'larını referans etme
-- **Akıllı Görüntüleme**: Ana BOM'lar yeşil, ara ürün BOM'ları mor etiket sistemi
-- **Type-Safe Operations**: String vs number comparison sorunları çözüldü
-- **Nested Form Management**: Ant Design Form.Item nested yapı optimizasyonu
-- **Dynamic Dropdown Logic**: Edit/Create modlarda farklı order item filtreleme
-- **Responsive Table Design**: Optimized column widths, no horizontal scroll
-- **Real-time Data Sync**: Frontend-backend data consistency
+## 🌐 Frontend Web Arayüzü ⭐⭐ (YENİ - 24 Ağustos 2025)
 
 ### **React + TypeScript + Ant Design Stack**:
 - **Modern Web Arayüzü**: Responsive, kullanıcı dostu tasarım
@@ -309,7 +298,7 @@ python manage.py collectstatic
 4. **Performans Analytics**: Üretim verimliliği raporları
 
 ---
-*Son güncelleme: 2025-08-26 - BOM Management Sistemi Tamamen Tamamlandı ✅*
+*Son güncelleme: 2025-08-24 - Frontend React Sipariş Yönetim ve Dosya Upload Sistemi Tamamen Tamamlandı ✅*
 *Claude Code session'ları için hazırlanmıştır*
 
 ## 📁 Backup Dosyaları
@@ -317,5 +306,4 @@ python manage.py collectstatic
 - `CLAUDE_backup_20250821_1647.md` - Üretim Modülü ve Görsel İş Akışı Tasarımı tamamlandıktan sonraki durum
 - `CLAUDE_backup_20250821_1655.md` - Üretim Modülü tamamen stabil ve test edilmiş durumda
 - `CLAUDE_backup_20250822.md` - Üretim Planlama Gantt sistemi tamamen çalışır durumda
-- `CLAUDE_backup_20250824.md` - Frontend React Sipariş Yönetim ve Dosya Upload Sistemi Tamamen Tamamlandı
-- `CLAUDE_backup_20250826_BOM_Management_Complete.md` - **EN SON** - BOM Management Sistemi Tamamen Tamamlandı
+- `CLAUDE_backup_20250824.md` - **EN SON** - Frontend React Sipariş Yönetim ve Dosya Upload Sistemi Tamamen Tamamlandı

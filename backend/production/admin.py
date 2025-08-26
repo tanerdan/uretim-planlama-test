@@ -18,7 +18,7 @@ from .models import (
     SiparisKalem, SiparisDosya, MalzemeIhtiyac,
     Tedarikci, SatinAlmaSiparisi, SatinAlmaKalemi,
     SatinAlmaTeslimGuncelleme, MalzemeGelis, StandardIsAdimi,
-    IsIstasyonu, IsAkisi, IsAkisiOperasyon, IsEmri
+    IsIstasyonu, IsAkisi, IsAkisiOperasyon, IsEmri, BOMTemplate
 )
     
 @admin.register(Musteri)
@@ -1183,6 +1183,48 @@ class UretimPlanlamaAdmin(admin.ModelAdmin):
                 return JsonResponse({'success': False, 'error': str(e)})
         
         return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@admin.register(BOMTemplate)
+class BOMTemplateAdmin(admin.ModelAdmin):
+    """BOM Template Admin"""
+    list_display = ['id', 'bom_tanimi', 'malzeme_sayisi', 'is_complete_display', 'eslestirilen_urun', 'guncellenme_tarihi']
+    list_filter = ['guncellenme_tarihi', 'eslestirilen_urun']
+    search_fields = ['bom_tanimi', 'aciklama']
+    readonly_fields = ['olusturulma_tarihi', 'guncellenme_tarihi']
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('bom_tanimi', 'aciklama', 'eslestirilen_urun')
+        }),
+        ('Malzeme Listesi (JSON)', {
+            'fields': ('malzemeler',),
+            'description': 'JSON formatında malzeme listesi'
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('olusturulma_tarihi', 'guncellenme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def malzeme_sayisi(self, obj):
+        return len(obj.malzemeler) if obj.malzemeler else 0
+    malzeme_sayisi.short_description = 'Malzeme Sayısı'
+    
+    def is_complete_display(self, obj):
+        if obj.is_complete():
+            return format_html('<span style="color: green;">✓ Tam</span>')
+        else:
+            missing = obj.get_missing_dependencies()
+            return format_html(
+                '<span style="color: red;">⚠ Eksik ({} adet)</span>',
+                len(missing)
+            )
+    is_complete_display.short_description = 'BOM Durumu'
+    
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        # JSON field'ı readonly yapmayalım ki düzenlenebilsin
+        return readonly_fields
 
 # Admin kayıtları
 admin.site.register(IsEmri, IsEmriAdmin)

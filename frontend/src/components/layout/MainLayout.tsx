@@ -106,49 +106,9 @@ const menuItems = [
     ],
   },
   {
-    key: 'production-group',
+    key: '/production',
     icon: <BuildOutlined />,
-    label: 'Üretim',
-    children: [
-      {
-        key: '/production',
-        label: <Link to="/production">Dashboard</Link>,
-      },
-      {
-        key: 'production-work-orders',
-        label: 'İş Emirleri',
-        children: [
-          {
-            key: '/production/work-orders',
-            label: <Link to="/production/work-orders">İş Emri Listesi</Link>,
-          },
-          {
-            key: '/production/work-orders/new',
-            label: <Link to="/production/work-orders/new">Yeni İş Emri</Link>,
-          },
-          {
-            key: '/production/work-orders/changes',
-            label: <Link to="/production/work-orders/changes">İş Emri Değişiklikleri</Link>,
-          },
-          {
-            key: '/production/work-orders/cancel',
-            label: <Link to="/production/work-orders/cancel">İş Emri İptali</Link>,
-          },
-        ],
-      },
-      {
-        key: '/production/stations',
-        label: <Link to="/production/stations">İş İstasyonları</Link>,
-      },
-      {
-        key: '/production/bom',
-        label: <Link to="/production/bom">Reçeteler (BOM)</Link>,
-      },
-      {
-        key: '/production/reports',
-        label: <Link to="/production/reports">Raporlar</Link>,
-      },
-    ],
+    label: <Link to="/production">Üretim</Link>,
   },
   {
     key: '/reports',
@@ -184,10 +144,7 @@ const MainLayout: React.FC = () => {
         activeKeys.push('procurement-orders');
       }
     } else if (path.startsWith('/production')) {
-      activeKeys.push('production-group');
-      if (path.includes('/work-orders')) {
-        activeKeys.push('production-work-orders');
-      }
+      activeKeys.push('/production'); // Production tek menü item olduğu için
     }
     
     return activeKeys;
@@ -203,12 +160,8 @@ const MainLayout: React.FC = () => {
       if (path.includes('/orders')) {
         openKeys.push('procurement-orders');
       }
-    } else if (path.startsWith('/production')) {
-      openKeys.push('production-group');
-      if (path.includes('/work-orders')) {
-        openKeys.push('production-work-orders');
-      }
     }
+    // Production artık submenu olmadığı için hiçbir şey eklemeye gerek yok
     
     return openKeys;
   };

@@ -33,7 +33,12 @@
       "Bash(git remote set-url:*)",
       "Bash(railway login:*)",
       "Bash(git rm:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)",
+      "Bash(wmic process where:*)",
+      "Bash(timeout:*)",
+      "Bash(find:*)"
     ],
     "additionalDirectories": [
       "D:\\Documents_D\\SoftwareDevelopment",

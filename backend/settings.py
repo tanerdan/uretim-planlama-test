@@ -20,7 +20,16 @@ SECRET_KEY = 'django-insecure-your-secret-key-here'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.118', '192.168.1.*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.118', '192.168.1.*', '192.168.25.*', '192.168.25.193', '*']
+
+# CORS settings for network access
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173", 
+    "http://192.168.25.193:5173",
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Basic Auth (production ortamında aktif olacak)
 BASIC_AUTH_ENABLED = os.environ.get('BASIC_AUTH_ENABLED', 'False').lower() == 'true'
@@ -44,13 +53,14 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'production.middleware.BasicAuthMiddleware',
+    'backend.production.middleware.BasicAuthMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',  # Bu satır önemli!
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'backend.production.middleware.AutoAdminLoginMiddleware',  # Auto-login for admin
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
